@@ -111,14 +111,47 @@
                     </li>
                 {% endfor %}
             </ul>
-            <!-- Pagination
-            <ul class="help--slides-pagination">
-              <li><a href="#" class="btn btn--small btn--without-border active" data-page="1">1</a></li>
-              <li><a href="#" class="btn btn--small btn--without-border" data-page="2">2</a></li>
-              <li><a href="#" class="btn btn--small btn--without-border" data-page="3">3</a></li>
-            </ul>
-            -->
+
+            <div class="pagination" data-list="foundations">
+                <ul class="help--slides-pagination">
+                    <!-- Previous page link -->
+                    {% if foundations.has_previous %}
+                        <li>
+                            <a href="?page_foundations=1" class="btn btn--small btn--without-border" data-page="1">&laquo;
+                                pierwsza</a>
+                        </li>
+                        <li>
+                            <a href="?page_foundations={{ foundations.previous_page_number }}"
+                               class="btn btn--small btn--without-border"
+                               data-page="{{ foundations.previous_page_number }}">poprzednia</a>
+                        </li>
+                    {% endif %}
+
+                    <!-- Current page number -->
+                    <li>
+                        <span class="current btn btn--small btn--without-border active">Strona {{ foundations.number }} z {{ foundations.paginator.num_pages }}.</span>
+                    </li>
+
+                    <!-- Next page link -->
+                    {% if foundations.has_next %}
+                        <li>
+                            <a href="?page_foundations={{ foundations.next_page_number }}"
+                               class="btn btn--small btn--without-border"
+                               data-page="{{ foundations.next_page_number }}">następna</a>
+                        </li>
+                        <li>
+                            <a href="?page_foundations={{ foundations.paginator.num_pages }}"
+                               class="btn btn--small btn--without-border"
+                               data-page="{{ foundations.paginator.num_pages }}">ostatnia &raquo;</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+
+
         </div>
+
+
 
 
         <!-- SLIDE 2 -->
@@ -144,15 +177,41 @@
                 {% endfor %}
             </ul>
 
-            <!-- Pagination
-            <ul class="help--slides-pagination">
-              <li><a href="#" class="btn btn--small btn--without-border active" data-page="1">1</a></li>
-              <li><a href="#" class="btn btn--small btn--without-border" data-page="2">2</a></li>
-              <li><a href="#" class="btn btn--small btn--without-border" data-page="3">3</a></li>
-              <li><a href="#" class="btn btn--small btn--without-border" data-page="4">4</a></li>
-              <li><a href="#" class="btn btn--small btn--without-border" data-page="5">5</a></li>
-            </ul>
-            -->
+            <div class="pagination" data-list="ngos">
+                <ul class="help--slides-pagination">
+                    <!-- Previous page link -->
+                    {% if ngos.has_previous %}
+                        <li>
+                            <a href="?page_ngos=1" class="btn btn--small btn--without-border" data-page="1">&laquo;
+                                pierwsza</a>
+                        </li>
+                        <li>
+                            <a href="?page_ngos={{ ngos.previous_page_number }}"
+                               class="btn btn--small btn--without-border" data-page="{{ ngos.previous_page_number }}">poprzednia</a>
+                        </li>
+                    {% endif %}
+
+                    <!-- Current page number -->
+                    <li>
+                        <span class="current btn btn--small btn--without-border active">Strona {{ ngos.number }} z {{ ngos.paginator.num_pages }}.</span>
+                    </li>
+
+                    <!-- Next page link -->
+                    {% if ngos.has_next %}
+                        <li>
+                            <a href="?page_ngos={{ ngos.next_page_number }}" class="btn btn--small btn--without-border"
+                               data-page="{{ ngos.next_page_number }}">następna</a>
+                        </li>
+                        <li>
+                            <a href="?page_ngos={{ ngos.paginator.num_pages }}"
+                               class="btn btn--small btn--without-border" data-page="{{ ngos.paginator.num_pages }}">ostatnia
+                                &raquo;</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+
+
         </div>
 
         <!-- SLIDE 3 -->
@@ -178,13 +237,47 @@
                 {% endfor %}
             </ul>
 
-            <!-- Pagination
-            <ul class="help--slides-pagination">
-              <li><a href="#" class="btn btn--small btn--without-border active" data-page="1">1</a></li>
-              <li><a href="#" class="btn btn--small btn--without-border" data-page="2">2</a></li>
-            </ul>
-            -->
-        </div>
+
+            <div class="pagination" data-list="local_collections">
+
+                <div class="pagination" data-list="local_collections">
+                    <ul class="help--slides-pagination">
+                        <!-- Previous page link -->
+                        {% if local_collections.has_previous %}
+                            <li>
+                                <a href="?page_local_collections=1" class="btn btn--small btn--without-border"
+                                   data-page="1">&laquo; pierwsza</a>
+                            </li>
+                            <li>
+                                <a href="?page_local_collections={{ local_collections.previous_page_number }}"
+                                   class="btn btn--small btn--without-border"
+                                   data-page="{{ local_collections.previous_page_number }}">poprzednia</a>
+                            </li>
+                        {% endif %}
+
+                        <!-- Current page number -->
+                        <li>
+                            <span class="current btn btn--small btn--without-border active">Strona {{ local_collections.number }} z {{ local_collections.paginator.num_pages }}.</span>
+                        </li>
+
+                        <!-- Next page link -->
+                        {% if local_collections.has_next %}
+                            <li>
+                                <a href="?page_local_collections={{ local_collections.next_page_number }}"
+                                   class="btn btn--small btn--without-border"
+                                   data-page="{{ local_collections.next_page_number }}">następna</a>
+                            </li>
+                            <li>
+                                <a href="?page_local_collections={{ local_collections.paginator.num_pages }}"
+                                   class="btn btn--small btn--without-border"
+                                   data-page="{{ local_collections.paginator.num_pages }}">ostatnia &raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+            </div>
+        
     </section>
 
     {#<script src="js/app.js"></script>#}
