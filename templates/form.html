@@ -64,7 +64,8 @@
         <div class="form--steps-container">
             <div class="form--steps-counter">Krok <span>1</span>/5</div>
 
-            <form action="form-confirmation.html" method="post">
+            <form action="{% url 'AddDonation' %}" method="post">
+            {% csrf_token %}
                 <!-- STEP 1 -->
                 <div data-step="1" class="active">
                     <h3>Zaznacz, co chcesz oddać:</h3>
