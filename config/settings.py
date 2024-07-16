@@ -111,6 +111,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# different login than accounts
+LOGIN_URL = '/login/'
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
