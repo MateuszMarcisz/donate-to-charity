@@ -59,11 +59,56 @@ document.addEventListener("DOMContentLoaded", function () {
         /**
          * TODO: callback to page change event
          */
+        // changePage(e) {
+        //     e.preventDefault();
+        //     const page = e.target.dataset.page;
+        //
+        //     // Make an AJAX call to fetch the new content
+        //     fetch(`?page=${page}`)
+        //         .then(response => response.text())
+        //         .then(html => {
+        //             // Parse the HTML and update the content
+        //             const parser = new DOMParser();
+        //             const doc = parser.parseFromString(html, 'text/html');
+        //             const newContent = doc.querySelector('.help--slides.active .help--slides-items');
+        //             const newPagination = doc.querySelector('.help--slides-pagination');
+        //
+        //             // Replace old content with new content
+        //             const currentContainer = this.$el.querySelector('.help--slides.active .help--slides-items');
+        //             currentContainer.innerHTML = newContent.innerHTML;
+        //
+        //             // Replace old pagination with new pagination
+        //             const currentPagination = this.$el.querySelector('.help--slides-pagination');
+        //             currentPagination.innerHTML = newPagination.innerHTML;
+        //         })
+        //         .catch(error => console.error('Error loading new page:', error));
+        // }
         changePage(e) {
             e.preventDefault();
-            const page = e.target.dataset.page;
+            const $btn = e.target;
+            const page = $btn.dataset.page;
+            const listType = $btn.closest(".pagination").dataset.list;
 
-            console.log(page);
+            fetch(`?page_${listType}=${page}`)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    // Update the corresponding list
+                    const newContent = doc.querySelector(`.help--slides[data-id="${this.currentSlide}"] .help--slides-items`);
+                    const newPagination = doc.querySelector(`.pagination[data-list="${listType}"] .help--slides-pagination`);
+
+                    const currentContent = this.$el.querySelector(`.help--slides[data-id="${this.currentSlide}"] .help--slides-items`);
+                    const currentPagination = this.$el.querySelector(`.pagination[data-list="${listType}"] .help--slides-pagination`);
+
+                    currentContent.innerHTML = newContent.innerHTML;
+                    currentPagination.innerHTML = newPagination.innerHTML;
+
+                    // Reattach events after replacing content
+                    this.events();
+                })
+                .catch(error => console.error('Error loading new page:', error));
         }
     }
 
