@@ -510,6 +510,7 @@ document.addEventListener("DOMContentLoaded", function () {
         init() {
             this.events();
             this.updateForm();
+            this.populateSummary(); // Initialize summary on form load
         }
 
         events() {
@@ -534,6 +535,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 el.addEventListener("change", () => {
                     this.categories = Array.from(document.querySelectorAll('[name="categories"]:checked')).map(el => el.value);
                     this.filterOrganizations();
+                    this.populateSummary(); // Update summary when categories change
                 });
             });
         }
@@ -553,6 +555,8 @@ document.addEventListener("DOMContentLoaded", function () {
             if (this.currentStep === 3) {
                 this.filterOrganizations();
             }
+
+            this.populateSummary(); // Update summary on form step change
         }
 
         filterOrganizations() {
@@ -569,8 +573,74 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
 
+        // populateSummary() {
+        //     // Collect form data and populate summary section
+        //     const formData = {
+        //         bags: document.querySelector('[name="bags"]').value,
+        //         categories: this.categories.map(cat => document.querySelector(`[value="${cat}"]`).nextElementSibling.innerText),
+        //         organization: document.querySelector('[name="organization"]:checked').nextElementSibling.innerText,
+        //         address: document.querySelector('[name="address"]').value,
+        //         city: document.querySelector('[name="city"]').value,
+        //         postcode: document.querySelector('[name="postcode"]').value,
+        //         phone: document.querySelector('[name="phone"]').value,
+        //         date: document.querySelector('[name="date"]').value,
+        //         time: document.querySelector('[name="time"]').value,
+        //         more_info: document.querySelector('[name="more_info"]').value
+        //     };
+        //
+        //     document.getElementById('summary-items').innerText = `${formData.bags} worki: ${formData.categories.join(', ')}`;
+        //     document.getElementById('summary-organization').innerText = formData.organization;
+        //     document.getElementById('summary-address').innerText = formData.address;
+        //     document.getElementById('summary-city').innerText = formData.city;
+        //     document.getElementById('summary-postcode').innerText = formData.postcode;
+        //     document.getElementById('summary-phone').innerText = formData.phone;
+        //     document.getElementById('summary-date').innerText = formData.date;
+        //     document.getElementById('summary-time').innerText = formData.time;
+        //     document.getElementById('summary-more_info').innerText = formData.more_info || 'Brak uwag';
+        // }
+        populateSummary() {
+            // Collect form data and populate summary section
+            const bags = document.querySelector('[name="bags"]').value;
+            const categories = Array.from(document.querySelectorAll('[name="categories"]:checked'))
+                          .map(el => el.parentElement.querySelector('.description').innerText.trim());
+            const organization = document.querySelector('[name="organization"]:checked');
+            const address = document.querySelector('[name="address"]').value;
+            const city = document.querySelector('[name="city"]').value;
+            const postcode = document.querySelector('[name="postcode"]').value;
+            const phone = document.querySelector('[name="phone"]').value;
+            const date = document.querySelector('[name="date"]').value;
+            const time = document.querySelector('[name="time"]').value;
+            const moreInfo = document.querySelector('[name="more_info"]').value || 'Brak uwag';
+
+            const categoriesText = categories.length > 0 ? categories.join(', ') : 'Brak kategorii wybranych';
+            const organizationText = organization ? organization.parentElement.querySelector('.description').innerText : 'Brak organizacji wybranej';
+
+            document.getElementById('summary-items').innerText = `Worki: ${bags}, Kategorie: ${categoriesText}`;
+            document.getElementById('summary-organization').innerText = organizationText;
+            document.getElementById('summary-address').innerText = address;
+            document.getElementById('summary-city').innerText = city;
+            document.getElementById('summary-postcode').innerText = postcode;
+            document.getElementById('summary-phone').innerText = phone;
+            document.getElementById('summary-date').innerText = date;
+            document.getElementById('summary-time').innerText = time;
+            document.getElementById('summary-more_info').innerText = moreInfo;
+            console.log(bags);
+            console.log(categories);
+            console.log(categoriesText);
+            console.log(organization);
+            console.log(organizationText)
+        }
+
+
         submit(e) {
             e.preventDefault();
+            // Implement validation if needed
+
+            // Update summary one last time before submission
+            this.populateSummary();
+
+
+            // Proceed with form submission
             this.currentStep++;
             this.updateForm();
         }
