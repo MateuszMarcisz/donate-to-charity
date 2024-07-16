@@ -1,8 +1,11 @@
+import json
+
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import models
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views import View
 
@@ -46,11 +49,18 @@ class LandingPageView(View):
 class AddDonationView(LoginRequiredMixin, View):
     def get(self, request):
         categories = Category.objects.all()
+        organizations = Institution.objects.all()
+        for organization in organizations:
+            category_ids = list(organization.categories.values_list('id', flat=True))
+            organization.category_ids_json = json.dumps(category_ids)
+
         context = {
             'categories': categories,
+            'organizations': organizations,
         }
 
         return render(request, 'form.html', context)
+
 
 
 class LoginView(View):
