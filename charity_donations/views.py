@@ -1,3 +1,4 @@
+from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import models
@@ -12,7 +13,6 @@ from charity_donations.models import Donation, Institution
 class LandingPageView(View):
 
     def get(self, request):
-
         number_of_bags = Donation.objects.aggregate(total_bags=models.Sum('quantity'))['total_bags'] or 0
         number_of_institutions = Donation.objects.values('institution').distinct().count()
 
@@ -51,6 +51,21 @@ class LoginView(View):
     def get(self, request):
         return render(request, 'login.html')
 
+    def post(self, request):
+        username = request.POST['email']
+        password = request.POST['password']
+
+        user = authenticate(username=username, password=password)
+        if user is not None:
+            redirect_url = request.GET.get('next', 'LandingPage')
+            login(request, user)
+            return redirect(redirect_url)
+        else:
+            if not User.objects.filter(username=username).exists():
+                return redirect('Register')
+            error = "Nieprawidłowa nazwa użytkownika lub hasło"
+            return render(request, "login.html", {'error': error})
+
 
 class RegisterView(View):
     def get(self, request):
@@ -71,4 +86,3 @@ class RegisterView(View):
             u.save()
             return redirect('Login')
         return render(request, 'register.html', {'error': 'Hasła nie są zgodne'})
-
