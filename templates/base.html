@@ -47,7 +47,9 @@
                     <li><a href="{% url 'LandingPage' %}#about-us" class="btn btn--without-border">O nas</a></li>
                     <li><a href="{% url 'LandingPage' %}#help" class="btn btn--without-border">Fundacje i
                         organizacje</a></li>
+                    {% if user.is_authenticated %}
                     <li><a href="{% url 'AddDonation' %}" class="btn btn--without-border">Przekaż dary</a></li>
+                    {% endif %}
                     <li><a href="#contact" class="btn btn--without-border">Kontakt</a></li>
                 </ul>
             </nav>
