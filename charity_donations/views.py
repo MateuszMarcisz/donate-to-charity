@@ -1,6 +1,7 @@
+from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import models
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views import View
 
 from charity_donations.models import Donation, Institution
@@ -54,3 +55,20 @@ class LoginView(View):
 class RegisterView(View):
     def get(self, request):
         return render(request, 'register.html')
+
+    def post(self, request):
+        first_name = request.POST.get('name')
+        last_name = request.POST.get('surname')
+        username = request.POST.get('email')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        password2 = request.POST.get('password2')
+        if password != "" and password == password2:
+            if User.objects.filter(username=username).exists():
+                return render(request, 'register.html', {'error': 'Użytkownik o podanym adresie email już istnieje'})
+            u = User(username=username, email=email, first_name=first_name, last_name=last_name)
+            u.set_password(password)
+            u.save()
+            return redirect('Login')
+        return render(request, 'register.html', {'error': 'Hasła nie są zgodne'})
+
