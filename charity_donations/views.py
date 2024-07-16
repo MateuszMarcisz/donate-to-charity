@@ -61,6 +61,44 @@ class AddDonationView(LoginRequiredMixin, View):
 
         return render(request, 'form.html', context)
 
+    def post(self, request):
+        bags = request.POST.get('bags')
+        categories_ids = request.POST.getlist('categories')
+        organization_id = request.POST.get('organization')
+        address = request.POST.get('address')
+        city = request.POST.get('city')
+        postcode = request.POST.get('postcode')
+        phone = request.POST.get('phone')
+        date = request.POST.get('date')
+        time = request.POST.get('time')
+        more_info = request.POST.get('more_info')
+        organization = Institution.objects.get(pk=organization_id)
+
+        try:
+            donation = Donation.objects.create(
+                quantity=bags,
+                institution=organization,
+                address=address,
+                phone_number=phone,
+                city=city,
+                zip_code=postcode,
+                pick_up_date=date,
+                pick_up_time=time,
+                pick_up_comment=more_info,
+                user=request.user
+            )
+            donation.categories.add(*categories_ids)
+
+            return redirect('FormConfirmation')
+
+        except Exception as e:
+            return render(request, 'form.html', {'error_message': str(e)})
+
+
+class FormConfirmationView(View):
+    def get(self, request):
+        return render(request, 'form-confirmation.html')
+
 
 class LoginView(View):
     def get(self, request):
