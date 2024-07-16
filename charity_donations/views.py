@@ -16,17 +16,17 @@ class LandingPageView(View):
         number_of_institutions = Donation.objects.values('institution').distinct().count()
 
         foundations = Institution.objects.filter(type=Institution.FOUNDATION)
-        paginator_foundations = Paginator(foundations, 2)
+        paginator_foundations = Paginator(foundations, 5)
         page_number_foundations = request.GET.get('page_foundations')
         page_object_foundations = paginator_foundations.get_page(page_number_foundations)
 
         local_collections = Institution.objects.filter(type=Institution.LOCAL_COLLECTION)
-        paginator_local_collections = Paginator(local_collections, 2)
+        paginator_local_collections = Paginator(local_collections, 5)
         page_number_local_collections = request.GET.get('page_local_collections')
         page_object_local_collections = paginator_local_collections.get_page(page_number_local_collections)
 
         ngos = Institution.objects.filter(type=Institution.NGO)
-        paginator_ngos = Paginator(ngos, 2)
+        paginator_ngos = Paginator(ngos, 5)
         page_number_ngos = request.GET.get('page_ngos')
         page_object_ngos = paginator_ngos.get_page(page_number_ngos)
 
