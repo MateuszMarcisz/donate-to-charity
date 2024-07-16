@@ -15,15 +15,38 @@
         {% block navbar %}
             <nav class="container container--70">
                 <ul class="nav--actions">
-                    <li><a href="{% url 'Login' %}" class="btn btn--small btn--without-border">Zaloguj</a></li>
-                    <li><a href="{% url 'Register' %}" class="btn btn--small btn--highlighted">Załóż konto</a></li>
+                    {% if user.is_authenticated %}
+                        <li class="logged-user">
+                            Witaj {{ user }}
+                            <ul class="dropdown">
+                                <li><a href="#">Profil</a></li>
+                                <li><a href="#">Ustawienia</a></li>
+                                {#                                <li><a href="#">Wyloguj</a></li>#}
+                                <li>
+                                    <form id="logout-form" method="POST" action="/logout/"
+                                          style="display: inline;">
+                                        {% csrf_token %}
+{#                                        <button type="submit" class="btn--without-border">Wyloguj</button>#}
+                                        <a href="#" onclick="document.getElementById('logout-form').submit();">Wyloguj</a>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+
+                    {% else %}
+
+                        <li><a href="{% url 'Login' %}" class="btn btn--small btn--without-border">Zaloguj</a></li>
+                        <li><a href="{% url 'Register' %}" class="btn btn--small btn--highlighted">Załóż konto</a></li>
+
+                    {% endif %}
                 </ul>
 
                 <ul>
                     <li><a href="{% url 'LandingPage' %}" class="btn btn--without-border active">Start</a></li>
                     <li><a href="{% url 'LandingPage' %}#steps" class="btn btn--without-border">O co chodzi?</a></li>
                     <li><a href="{% url 'LandingPage' %}#about-us" class="btn btn--without-border">O nas</a></li>
-                    <li><a href="{% url 'LandingPage' %}#help" class="btn btn--without-border">Fundacje i organizacje</a></li>
+                    <li><a href="{% url 'LandingPage' %}#help" class="btn btn--without-border">Fundacje i
+                        organizacje</a></li>
                     <li><a href="{% url 'AddDonation' %}" class="btn btn--without-border">Przekaż dary</a></li>
                     <li><a href="#contact" class="btn btn--without-border">Kontakt</a></li>
                 </ul>
