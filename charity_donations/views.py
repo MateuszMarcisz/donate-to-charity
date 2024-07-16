@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import models
@@ -65,6 +65,12 @@ class LoginView(View):
                 return redirect('Register')
             error = "Nieprawidłowa nazwa użytkownika lub hasło"
             return render(request, "login.html", {'error': error})
+
+
+class LogoutView(View):
+    def post(self, request):
+        logout(request)
+        return redirect('LandingPage')
 
 
 class RegisterView(View):
