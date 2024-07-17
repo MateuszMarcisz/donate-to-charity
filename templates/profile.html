@@ -1,40 +1,3 @@
-{#{% extends 'base.html' %}#}
-{##}
-{#<header class="header--main-page">#}
-{#    {% block navbar %}#}
-{#        {{ block.super }}#}
-{#    {% endblock %}#}
-{##}
-{#    {% block header_help %}#}
-{#        <header class="header--main-page">#}
-{#            <div class="header--main-page">#}
-{#                <div class="slogan container2">#}
-{#                    <div>#}
-{#                        <h2>Mój Profil</h2>#}
-{#                    </div>#}
-{##}
-{#                </div>#}
-{#                <div class="container2">#}
-{#                    <div></div>#}
-{#                    <div>#}
-{#                        <p style="font-size: 2em">Informacje</p>#}
-{#                                                #}
-{#                        <p>Użytkownik:</p> #}
-{#                                {{ user }} <br>#}
-{#                            Imię: <br>#}
-{#                        {{ user.first_name }} <br>#}
-{#                            Nazwisko: <br>#}
-{#                        {{ user.last_name }} <br>#}
-{#                        #}
-{#                    </div>#}
-{#                </div>#}
-{##}
-{#            </div>#}
-{#        </header>#}
-{#    {% endblock %}#}
-{#</header>#}
-{##}
-
 {% extends 'base.html' %}
 
 <header class="header--main-page">
@@ -46,7 +9,6 @@
         <div>
             <h2>Mój Profil</h2>
         </div>
-
 
         <div class="container-profile">
             <div class="info-title">
@@ -65,32 +27,35 @@
             </div>
             <div class="custom-info-details">
                 {% if donations %}
-                    <ul class="custom-donation-list">
-                        {% for donation in donations %}
-                            <li class="custom-donation-item">
-                                <p><strong>Worki przekazane:</strong> {{ donation.quantity }}</p>
-                                <p><strong>Organizacja:</strong> {{ donation.institution.name }}</p>
-                                <p><strong>Kategorie:</strong>
-                                    {% for category in donation.categories.all %}
-                                        {{ category.name }}{% if not forloop.last %}, {% endif %}
-                                    {% endfor %}
-                                </p>
-                                <p><strong>Data odbioru:</strong> {{ donation.pick_up_date }}</p>
-                                <p><strong>Godzina odbioru:</strong> {{ donation.pick_up_time }}</p>
-{#                                {% if donation.pick_up_comment %}#}
-{#                                    <p><strong>Komentarz:</strong> {{ donation.pick_up_comment }}</p>#}
-{#                                {% endif %}#}
-                            </li>
-                        {% endfor %}
-                    </ul>
+                    <form method="post" class="custom-form">
+                        {% csrf_token %}
+                        <ul class="custom-donation-list">
+                            {% for donation in donations %}
+                                <li class="custom-donation-item {% if donation.is_taken %}taken{% endif %}">
+                                    <div class="to-the-right">
+                                        <label for="is_taken_{{ donation.id }}" style="margin-right: 10px;">Odebrane</label>
+                                        <input type="checkbox" id="is_taken_{{ donation.id }}" name="is_taken_{{ donation.id }}" value="true" {% if donation.is_taken %}checked{% endif %}>
+                                    </div>
+                                    <p><strong>Worki przekazane:</strong> {{ donation.quantity }}</p>
+                                    <p><strong>Organizacja:</strong> {{ donation.institution.name }}</p>
+                                    <p><strong>Kategorie:</strong>
+                                        {% for category in donation.categories.all %}
+                                            {{ category.name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </p>
+                                    <p><strong>Data odbioru:</strong> {{ donation.pick_up_date }}</p>
+                                    <p><strong>Godzina odbioru:</strong> {{ donation.pick_up_time }}</p>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="submit-button-container">
+                            <button type="submit">Zapisz zmiany</button>
+                        </div>
+                    </form>
                 {% else %}
                     <p>Brak przekazanych darów.</p>
                 {% endif %}
             </div>
         </div>
-
-
-
     {% endblock %}
 </header>
-
