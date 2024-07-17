@@ -10,4 +10,5 @@ urlpatterns = [
     path('logout/', views.LogoutView.as_view(), name='Logout'),
     path('donation/form-confirmation/', views.FormConfirmationView.as_view(), name='FormConfirmation'),
     path('profile/', views.ProfileView.as_view(), name='Profile'),
+    path('settings/', views.SettingsView.as_view(), name='Settings'),
 ]
