@@ -1885,3 +1885,45 @@ footer .bottom-line--icons a img {
 .info-details strong {
     font-weight: bold; /* Bold text for labels */
 }
+
+
+.custom-container-profile {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 5rem;
+}
+
+
+.custom-info-details {
+    background-color: papayawhip;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    /*max-width: 1000px;*/
+    min-width: 600px;
+}
+
+.custom-info-details p {
+    font-size: 2rem;
+    margin: 10px 0;
+}
+
+.custom-info-details strong {
+    font-weight: bold;
+}
+
+.custom-donation-item {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    margin-bottom: 20px;
+    list-style-type: none;
+}
+.custom-donation-item p:nth-child(odd) {
+  background-color: rgb(240, 240, 240);
+}
+
+
