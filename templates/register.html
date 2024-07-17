@@ -13,23 +13,27 @@
             {% csrf_token %}
             <div class="form-group">
                 <label for="name" class="visually-hidden">Imię</label>
-                <input type="text" id="name" name="name" placeholder="Imię" required />
+                <input type="text" id="name" name="name" placeholder="Imię" required/>
             </div>
             <div class="form-group">
                 <label for="surname" class="visually-hidden">Nazwisko</label>
-                <input type="text" id="surname" name="surname" placeholder="Nazwisko" required />
+                <input type="text" id="surname" name="surname" placeholder="Nazwisko" required/>
+            </div>
+            <div class="form-group">
+                <label for="username" class="visually-hidden">Imię</label>
+                <input type="text" id="username" name="username" placeholder="Username" required/>
             </div>
             <div class="form-group">
                 <label for="email" class="visually-hidden">Email</label>
-                <input type="email" id="email" name="email" placeholder="Email" required />
+                <input type="email" id="email" name="email" placeholder="Email" required/>
             </div>
             <div class="form-group">
                 <label for="password" class="visually-hidden">Hasło</label>
-                <input type="password" id="password" name="password" placeholder="Hasło" required />
+                <input type="password" id="password" name="password" placeholder="Hasło" required/>
             </div>
             <div class="form-group">
                 <label for="password2" class="visually-hidden">Powtórz hasło</label>
-                <input type="password" id="password2" name="password2" placeholder="Powtórz hasło" required />
+                <input type="password" id="password2" name="password2" placeholder="Powtórz hasło" required/>
             </div>
             {% if error %}
                 <div style="color:red">{{ error }}</div>

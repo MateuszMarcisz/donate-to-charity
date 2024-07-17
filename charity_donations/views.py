@@ -1,6 +1,7 @@
 import json
 
-from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
@@ -9,6 +10,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views import View
 
+# from charity_donations.forms import ChangePasswordForm
 from charity_donations.models import Donation, Institution, Category
 
 
@@ -105,7 +107,7 @@ class LoginView(View):
         return render(request, 'login.html')
 
     def post(self, request):
-        username = request.POST['email']
+        username = request.POST['username']
         password = request.POST['password']
 
         user = authenticate(username=username, password=password)
@@ -133,7 +135,7 @@ class RegisterView(View):
     def post(self, request):
         first_name = request.POST.get('name')
         last_name = request.POST.get('surname')
-        username = request.POST.get('email')
+        username = request.POST.get('username')
         email = request.POST.get('email')
         password = request.POST.get('password')
         password2 = request.POST.get('password2')
@@ -170,4 +172,62 @@ class ProfileView(LoginRequiredMixin, View):
 
 class SettingsView(LoginRequiredMixin, View):
     def get(self, request):
-        return render(request, 'settings.html')
+        user = request.user
+        # update_info_form = UpdateInfoForm(instance=user)
+        # change_password_form = ChangePasswordForm()
+        context = {
+            'user': user,
+            # 'update_info_form': update_info_form,
+            # 'change_password_form': change_password_form,
+        }
+        return render(request, 'settings.html', context)
+
+    def post(self, request):
+        user = request.user
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        form_type = request.POST.get('form_type')
+        change_password = request.POST.get('change_password')
+        change_password2 = request.POST.get('change_password2')
+
+        if form_type == 'update_info':
+            password_entered = request.POST.get('password')
+            if user.check_password(password_entered):
+                try:
+                    user.username = username
+                    user.email = email
+                    user.first_name = first_name
+                    user.last_name = last_name
+                    user.save()
+                    messages.success(request, 'Twoje dane zostały zmienione!')
+                    return redirect('Settings')
+                except Exception as e:
+                    messages.error(request,
+                                   'Incorrect password. Please enter your current password to update your information.')
+            else:
+                messages.error(request,
+                               'Nieprawidłowe hasło użytkownika!')
+
+        if form_type == 'update_password':
+            confirm_password = request.POST.get('confirm_password')
+            if user.check_password(confirm_password):
+                if change_password == change_password2:
+                    user.set_password(change_password)
+                    user.save()
+                    messages.success(request, 'Twoje hasło zostało zmienione!')
+                else:
+                    messages.error(request, 'Nowe hasła nie są zgodne')
+
+            else:
+                messages.error(request, 'Nieprawidłowe hasło użytkownika!')
+
+        # else:
+        #     messages.error(request,
+        #                    'There was an error updating your information. Please correct the errors below.')
+
+        context = {
+            'user': user,
+        }
+        return render(request, 'settings.html', context)
