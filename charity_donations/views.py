@@ -166,3 +166,8 @@ class ProfileView(LoginRequiredMixin, View):
                 donation.is_taken = False
             donation.save()
         return redirect('Profile')
+
+
+class SettingsView(LoginRequiredMixin, View):
+    def get(self, request):
+        return render(request, 'settings.html')
