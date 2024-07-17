@@ -59,6 +59,36 @@
             </div>
         </div>
 
+        <div class="custom-container-profile">
+            <div class="info-title">
+                <p>Przekazane dary</p>
+            </div>
+            <div class="custom-info-details">
+                {% if donations %}
+                    <ul class="custom-donation-list">
+                        {% for donation in donations %}
+                            <li class="custom-donation-item">
+                                <p><strong>Worki przekazane:</strong> {{ donation.quantity }}</p>
+                                <p><strong>Organizacja:</strong> {{ donation.institution.name }}</p>
+                                <p><strong>Kategorie:</strong>
+                                    {% for category in donation.categories.all %}
+                                        {{ category.name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </p>
+                                <p><strong>Data odbioru:</strong> {{ donation.pick_up_date }}</p>
+                                <p><strong>Godzina odbioru:</strong> {{ donation.pick_up_time }}</p>
+{#                                {% if donation.pick_up_comment %}#}
+{#                                    <p><strong>Komentarz:</strong> {{ donation.pick_up_comment }}</p>#}
+{#                                {% endif %}#}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Brak przekazanych darów.</p>
+                {% endif %}
+            </div>
+        </div>
+
 
 
     {% endblock %}
