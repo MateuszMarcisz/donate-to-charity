@@ -145,3 +145,11 @@ class RegisterView(View):
             u.save()
             return redirect('Login')
         return render(request, 'register.html', {'error': 'Hasła nie są zgodne'})
+
+
+class ProfileView(LoginRequiredMixin, View):
+    def get(self, request):
+        user = request.user
+        first_name = user.first_name
+        last_name = user.last_name
+        return render(request, 'profile.html')

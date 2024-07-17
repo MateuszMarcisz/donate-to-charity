@@ -1,0 +1,66 @@
+{#{% extends 'base.html' %}#}
+{##}
+{#<header class="header--main-page">#}
+{#    {% block navbar %}#}
+{#        {{ block.super }}#}
+{#    {% endblock %}#}
+{##}
+{#    {% block header_help %}#}
+{#        <header class="header--main-page">#}
+{#            <div class="header--main-page">#}
+{#                <div class="slogan container2">#}
+{#                    <div>#}
+{#                        <h2>Mój Profil</h2>#}
+{#                    </div>#}
+{##}
+{#                </div>#}
+{#                <div class="container2">#}
+{#                    <div></div>#}
+{#                    <div>#}
+{#                        <p style="font-size: 2em">Informacje</p>#}
+{#                                                #}
+{#                        <p>Użytkownik:</p> #}
+{#                                {{ user }} <br>#}
+{#                            Imię: <br>#}
+{#                        {{ user.first_name }} <br>#}
+{#                            Nazwisko: <br>#}
+{#                        {{ user.last_name }} <br>#}
+{#                        #}
+{#                    </div>#}
+{#                </div>#}
+{##}
+{#            </div>#}
+{#        </header>#}
+{#    {% endblock %}#}
+{#</header>#}
+{##}
+
+{% extends 'base.html' %}
+
+<header class="header--main-page">
+    {% block navbar %}
+        {{ block.super }}
+    {% endblock %}
+
+    {% block header_help %}
+        <div>
+            <h2>Mój Profil</h2>
+        </div>
+
+
+        <div class="container-profile">
+            <div class="info-title">
+                <p>Informacje</p>
+            </div>
+            <div class="info-details center-text">
+                <p><strong>Użytkownik</strong><br> {{ user }}</p><br>
+                <p><strong>Imię</strong> <br>{{ user.first_name }}</p><br>
+                <p><strong>Nazwisko</strong> <br> {{ user.last_name }}</p>
+            </div>
+        </div>
+
+
+
+    {% endblock %}
+</header>
+
