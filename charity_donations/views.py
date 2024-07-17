@@ -155,3 +155,14 @@ class ProfileView(LoginRequiredMixin, View):
         }
 
         return render(request, 'profile.html', context)
+
+    def post(self, request):
+        donations = Donation.objects.filter(user=request.user)
+        for donation in donations:
+            is_taken_field = f'is_taken_{donation.id}'
+            if is_taken_field in request.POST:
+                donation.is_taken = True
+            else:
+                donation.is_taken = False
+            donation.save()
+        return redirect('Profile')
