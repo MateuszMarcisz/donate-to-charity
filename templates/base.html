@@ -21,6 +21,9 @@
                             <ul class="dropdown">
                                 <li><a href="#">Profil</a></li>
                                 <li><a href="#">Ustawienia</a></li>
+                                {% if user.is_superuser %}
+                                <li><a href="{% url 'admin:index' %}">Panel Administracyjny</a></li>
+                                    {% endif %}
                                 {#                                <li><a href="#">Wyloguj</a></li>#}
                                 <li>
                                     <form id="logout-form" method="POST" action="/logout/"
