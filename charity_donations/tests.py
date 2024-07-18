@@ -3,6 +3,7 @@ from datetime import date, time
 
 import pytest
 from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
 from django.core.paginator import Paginator
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -318,7 +319,7 @@ def test_add_donation_view_get_check_for_context_in_form(user, donations, instit
 
 
 @pytest.mark.django_db
-def test_add_donation_view_post(user, categories, institutions):
+def test_add_donation_view_post(user, categories, institutions, donations):
     client = Client()
     client.force_login(user)
 
@@ -344,7 +345,18 @@ def test_add_donation_view_post(user, categories, institutions):
     assert response.url == reverse('FormConfirmation')
     assert Donation.objects.count() == initial_donation_count + 1
 
-    donation = Donation.objects.get(id=1)
+    donation = Donation.objects.get(
+        quantity=data['bags'],
+        institution=organization,
+        address=data['address'],
+        city=data['city'],
+        zip_code=data['postcode'],
+        phone_number=data['phone'],
+        pick_up_date=date.today(),
+        pick_up_time=time(10, 30),
+        pick_up_comment=data['more_info'],
+        user=user
+    )
     assert donation.quantity == data['bags']
     assert donation.institution == organization
     assert donation.address == data['address']
@@ -477,3 +489,275 @@ def test_confirmation_view_not_logged(user):
     assert response.status_code == 302
     assert response.url.startswith(reverse('Login'))
     assert 'next=/donation/form-confirmation/' in response.url
+
+
+@pytest.mark.django_db
+def test_profile_view_get(user):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Profile')
+    response = client.get(url)
+    assert response.status_code == 200
+    assertTemplateUsed(response, 'profile.html')
+
+
+@pytest.mark.django_db
+def test_profile_view_get_not_logged(user):
+    client = Client()
+    url = reverse('Profile')
+    response = client.get(url)
+    assert response.status_code == 302
+    assert response.url.startswith(reverse('Login'))
+    assert '/login/?next=/profile/' in response.url
+
+
+@pytest.mark.django_db
+def test_profile_view_get_display_donations(user, institutions, categories):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Profile')
+    initial_donation_count = Donation.objects.count()
+
+    donation1 = Donation.objects.create(
+        quantity=5,
+        institution=institutions[0],
+        pick_up_date=date(2024, 7, 18),
+        pick_up_time=time(10, 0),
+        user=user,
+        is_taken=False,
+        address='Street',
+        phone_number='123456789',
+        city='City',
+        zip_code='12345',
+        pick_up_comment=f'Comment for Donation'
+    )
+    donation1.categories.set(categories)
+
+    response = client.get(url)
+    assert response.status_code == 200
+    assert 'Brak przekazanych darów.' not in response.content.decode('utf-8')
+
+    assert Donation.objects.count() == initial_donation_count + 1
+
+    donation2 = Donation.objects.create(
+        quantity=7,
+        institution=institutions[1],
+        pick_up_date=date(2024, 8, 28),
+        pick_up_time=time(17, 15),
+        user=user,
+        is_taken=False,
+        address='Street',
+        phone_number='123456789',
+        city='City',
+        zip_code='12345',
+        pick_up_comment=f'Comment for Donation'
+    )
+    donation2.categories.set(categories)
+    response = client.get(url)
+    assert response.status_code == 200
+    assert 'Brak przekazanych darów.' not in response.content.decode('utf-8')
+    assert Donation.objects.count() == initial_donation_count + 2
+
+
+@pytest.mark.django_db
+def test_profile_view_post_method(user, donations):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Profile')
+
+    post_data = {f'is_taken_{donation.id}': 'true' for donation in donations}
+
+    response = client.post(url, post_data, follow=True)
+
+    assert response.status_code == 200
+    assert response.redirect_chain[-1][0] == reverse('Profile')
+
+    for donation in donations:
+        donation.refresh_from_db()
+        assert donation.is_taken is True
+
+
+@pytest.mark.django_db
+def test_profile_view_post_method_another_case(user, donations):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Profile')
+
+    post_data = {}
+    for donation in donations:
+        if donation.id in [donations[2].id, donations[6].id]:
+            post_data[f'is_taken_{donation.id}'] = 'true'
+
+    response = client.post(url, post_data, follow=True)
+
+    assert response.status_code == 200
+    assert response.redirect_chain[-1][0] == reverse('Profile')
+
+    for donation in donations:
+        donation.refresh_from_db()
+        if donation.id in [donations[2].id, donations[6].id]:
+            assert donation.is_taken is True
+        else:
+            assert donation.is_taken is False
+
+
+@pytest.mark.django_db
+def test_settings_view_get(user):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Settings')
+    response = client.get(url)
+    assert response.status_code == 200
+    assertTemplateUsed(response, 'settings.html')
+
+
+@pytest.mark.django_db
+def test_profile_view_not_logged(user):
+    client = Client()
+    url = reverse('Settings')
+    response = client.get(url)
+    assert response.status_code == 302
+    assert response.url.startswith(reverse('Login'))
+    assert '/login/?next=/settings/' in response.url
+
+
+@pytest.mark.django_db
+def test_settings_view_get_user_details(user):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Settings')
+    response = client.get(url)
+    assert 'user' in response.context
+    assert response.context['user'] == user
+
+    content = response.content.decode()
+    assert user.username in content
+    assert user.email in content
+    assert user.first_name in content
+    assert user.last_name in content
+
+
+@pytest.mark.django_db
+def test_settings_post_info_update(user):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Settings')
+
+    post_data = {
+        'form_type': 'update_info',
+        'username': 'newusername',
+        'email': 'newemail@example.com',
+        'first_name': 'NewFirstName',
+        'last_name': 'NewLastName',
+        'password': 'test password',
+    }
+
+    response = client.post(url, post_data, follow=True)
+    user.refresh_from_db()
+
+    assert response.status_code == 200
+    assert user.username == 'newusername'
+    assert user.email == 'newemail@example.com'
+    assert user.first_name == 'NewFirstName'
+    assert user.last_name == 'NewLastName'
+
+    messages = list(get_messages(response.wsgi_request))
+    assert any("Twoje dane zostały zmienione!" in str(message) for message in messages)
+
+
+@pytest.mark.django_db
+def test_settings_post_info_update_wrong_password(user):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Settings')
+
+    post_data = {
+        'form_type': 'update_info',
+        'username': 'newusername',
+        'email': 'newemail@example.com',
+        'first_name': 'NewFirstName',
+        'last_name': 'NewLastName',
+        'password': 'wrongpassword',  # Incorrect password
+    }
+
+    response = client.post(url, post_data, follow=True)
+    user.refresh_from_db()
+
+    assert response.status_code == 200
+    assert user.username != 'newusername'
+    assert user.email != 'newemail@example.com'
+    assert user.first_name != 'NewFirstName'
+    assert user.last_name != 'NewLastName'
+
+    messages = list(get_messages(response.wsgi_request))
+    assert any("Nieprawidłowe hasło użytkownika!" in str(message) for message in messages)
+
+
+@pytest.mark.django_db
+def test_settings_post_password_change(user):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Settings')
+
+    post_data = {
+        'form_type': 'update_password',
+        'change_password': 'newpassword',
+        'change_password2': 'newpassword',
+        'confirm_password': 'test password',
+    }
+
+    response = client.post(url, post_data, follow=True)
+    user.refresh_from_db()
+
+    assert response.status_code == 200
+    assert user.check_password('newpassword')
+
+    messages = list(get_messages(response.wsgi_request))
+    assert any("Twoje hasło zostało zmienione!" in str(message) for message in messages)
+
+
+@pytest.mark.django_db
+def test_settings_post_password_change_non_matching_new_passwords(user):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Settings')
+
+    post_data = {
+        'form_type': 'update_password',
+        'change_password': 'newpassword',
+        'change_password2': 'differentnewpassword',
+        'confirm_password': 'test password',
+    }
+
+    response = client.post(url, post_data, follow=True)
+    user.refresh_from_db()
+
+    assert response.status_code == 200
+    assert not user.check_password('newpassword')
+    assert not user.check_password('differentnewpassword')
+
+    messages = list(get_messages(response.wsgi_request))
+    assert any("Nowe hasła nie są zgodne" in str(message) for message in messages)
+
+
+@pytest.mark.django_db
+def test_settings_post_password_change_incorrect_current_password(user):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Settings')
+
+    post_data = {
+        'form_type': 'update_password',
+        'change_password': 'newpassword',
+        'change_password2': 'newpassword',
+        'confirm_password': 'wrongpassword',
+    }
+
+    response = client.post(url, post_data, follow=True)
+    user.refresh_from_db()
+
+    assert response.status_code == 200
+    assert not user.check_password('newpassword')
+
+    messages = list(get_messages(response.wsgi_request))
+    assert any("Nieprawidłowe hasło użytkownika!" in str(message) for message in messages)
