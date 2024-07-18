@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import models
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -205,10 +206,15 @@ class SettingsView(LoginRequiredMixin, View):
         form_type = request.POST.get('form_type')
         change_password = request.POST.get('change_password')
         change_password2 = request.POST.get('change_password2')
+        password_entered = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
 
         if form_type == 'update_info':
-            password_entered = request.POST.get('password')
-            if user.check_password(password_entered):
+            if not all([username, email, first_name, last_name, password_entered]):
+                messages.error(request, 'Wszystkie pola muszą być wypełnione.')
+            elif not user.check_password(password_entered):
+                messages.error(request, 'Nieprawidłowe hasło użytkownika!')
+            else:
                 try:
                     user.username = username
                     user.email = email
@@ -217,31 +223,32 @@ class SettingsView(LoginRequiredMixin, View):
                     user.save()
                     messages.success(request, 'Twoje dane zostały zmienione!')
                     return redirect('Settings')
-                except Exception as e:
-                    messages.error(request,
-                                   'Incorrect password. Please enter your current password to update your information.')
-            else:
-                messages.error(request,
-                               'Nieprawidłowe hasło użytkownika!')
+                except Exception:
+                    messages.error(request, 'Wystąpił błąd podczas aktualizacji danych.')
 
         elif form_type == 'update_password':
-            confirm_password = request.POST.get('confirm_password')
-            if user.check_password(confirm_password):
-                if change_password == change_password2:
+            if not all([change_password, change_password2, confirm_password]):
+                messages.error(request, 'Wszystkie pola muszą być wypełnione.')
+            elif not user.check_password(confirm_password):
+                messages.error(request, 'Nieprawidłowe hasło użytkownika!')
+            elif change_password != change_password2:
+                messages.error(request, 'Nowe hasła nie są zgodne')
+            else:
+                try:
                     user.set_password(change_password)
                     user.save()
+                    update_session_auth_hash(request, user)  # Keep the user logged in with the new password
                     messages.success(request, 'Twoje hasło zostało zmienione!')
-                else:
-                    messages.error(request, 'Nowe hasła nie są zgodne')
-
-            else:
-                messages.error(request, 'Nieprawidłowe hasło użytkownika!')
+                    return redirect('Settings')
+                except Exception:
+                    messages.error(request, 'Wystąpił błąd podczas aktualizacji hasła.')
 
         else:
-            messages.error(request,
-                           'There was an error updating your information. Please correct the errors below.')
+            messages.error(request, 'Nieprawidłowy typ formularza.')
 
         context = {
             'user': user,
         }
         return render(request, 'settings.html', context)
+
+
