@@ -158,7 +158,6 @@ class RegisterView(View):
         return redirect('Login')
 
 
-
 class ProfileView(LoginRequiredMixin, View):
     def get(self, request):
         donations = Donation.objects.filter(user=request.user)
@@ -183,12 +182,8 @@ class ProfileView(LoginRequiredMixin, View):
 class SettingsView(LoginRequiredMixin, View):
     def get(self, request):
         user = request.user
-        # update_info_form = UpdateInfoForm(instance=user)
-        # change_password_form = ChangePasswordForm()
         context = {
             'user': user,
-            # 'update_info_form': update_info_form,
-            # 'change_password_form': change_password_form,
         }
         return render(request, 'settings.html', context)
 
@@ -220,7 +215,7 @@ class SettingsView(LoginRequiredMixin, View):
                 messages.error(request,
                                'Nieprawidłowe hasło użytkownika!')
 
-        if form_type == 'update_password':
+        elif form_type == 'update_password':
             confirm_password = request.POST.get('confirm_password')
             if user.check_password(confirm_password):
                 if change_password == change_password2:
@@ -233,9 +228,9 @@ class SettingsView(LoginRequiredMixin, View):
             else:
                 messages.error(request, 'Nieprawidłowe hasło użytkownika!')
 
-        # else:
-        #     messages.error(request,
-        #                    'There was an error updating your information. Please correct the errors below.')
+        else:
+            messages.error(request,
+                           'There was an error updating your information. Please correct the errors below.')
 
         context = {
             'user': user,
