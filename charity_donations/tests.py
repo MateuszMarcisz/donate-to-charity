@@ -1,4 +1,5 @@
 import json
+from datetime import date, time
 
 import pytest
 from django.contrib.auth.models import User
@@ -314,3 +315,165 @@ def test_add_donation_view_get_check_for_context_in_form(user, donations, instit
     for organization in organizations_in_context:
         category_ids = list(organization.categories.values_list('id', flat=True))
         assert organization.category_ids_json == json.dumps(category_ids)
+
+
+@pytest.mark.django_db
+def test_add_donation_view_post(user, categories, institutions):
+    client = Client()
+    client.force_login(user)
+
+    initial_donation_count = Donation.objects.count()
+
+    organization = institutions[0]
+    data = {
+        'bags': 5,
+        'categories': [category.id for category in categories[:2]],
+        'organization': organization.id,
+        'address': 'Test Address',
+        'city': 'Test City',
+        'postcode': '12345',
+        'phone': '1234567890',
+        'date': str(date.today()),
+        'time': str(time(10, 30)),
+        'more_info': 'Some additional information'
+    }
+
+    url = reverse('AddDonation')
+    response = client.post(url, data)
+    assert response.status_code == 302
+    assert response.url == reverse('FormConfirmation')
+    assert Donation.objects.count() == initial_donation_count + 1
+
+    donation = Donation.objects.get(id=1)
+    assert donation.quantity == data['bags']
+    assert donation.institution == organization
+    assert donation.address == data['address']
+    assert donation.city == data['city']
+    assert donation.zip_code == data['postcode']
+    assert donation.phone_number == data['phone']
+    assert donation.pick_up_date == date.today()
+    assert donation.pick_up_time == time(10, 30)
+    assert donation.pick_up_comment == data['more_info']
+    assert donation.user == user
+
+    assert list(donation.categories.all().values_list('id', flat=True)) == data['categories']
+
+
+@pytest.mark.django_db
+def test_add_donation_view_post_missing_data(user, categories, institutions):
+    client = Client()
+    client.force_login(user)
+
+    initial_donation_count = Donation.objects.count()
+
+    organization = institutions[0]
+
+    # no bags
+    data = {
+        'categories': [category.id for category in categories[:2]],
+        'organization': organization.id,
+        'address': 'Test Address',
+        'city': 'Test City',
+        'postcode': '12345',
+        'phone': '1234567890',
+        'date': str(date.today()),
+        'time': str(time(10, 30)),
+        'more_info': 'Some additional information'
+    }
+    url = reverse('AddDonation')
+    response = client.post(url, data)
+    assert response.status_code == 400
+    assert response.content.decode('utf-8') == "Missing required data"
+    assert Donation.objects.count() == initial_donation_count
+
+    # no categories
+    data = {
+        'bags': 5,
+        'organization': organization.id,
+        'address': 'Test Address',
+        'city': 'Test City',
+        'postcode': '12345',
+        'phone': '1234567890',
+        'date': str(date.today()),
+        'time': str(time(10, 30)),
+        'more_info': 'Some additional information'
+    }
+    url = reverse('AddDonation')
+    response = client.post(url, data)
+    assert response.status_code == 400
+    assert response.content.decode('utf-8') == "Missing required data"
+    assert Donation.objects.count() == initial_donation_count
+
+    # no organization
+    data = {
+        'bags': 5,
+        'categories': [category.id for category in categories[:2]],
+        'address': 'Test Address',
+        'city': 'Test City',
+        'postcode': '12345',
+        'phone': '1234567890',
+        'date': str(date.today()),
+        'time': str(time(10, 30)),
+        'more_info': 'Some additional information'
+    }
+    url = reverse('AddDonation')
+    response = client.post(url, data)
+    assert response.status_code == 400
+    assert response.content.decode('utf-8') == "Missing required data"
+    assert Donation.objects.count() == initial_donation_count
+
+    # no phone
+    data = {
+        'bags': 5,
+        'categories': [category.id for category in categories[:2]],
+        'organization': organization.id,
+        'address': 'Test Address',
+        'city': 'Test City',
+        'postcode': '12345',
+        'date': str(date.today()),
+        'time': str(time(10, 30)),
+        'more_info': 'Some additional information'
+    }
+    url = reverse('AddDonation')
+    response = client.post(url, data)
+    assert response.status_code == 400
+    assert response.content.decode('utf-8') == "Missing required data"
+    assert Donation.objects.count() == initial_donation_count
+
+    # no date
+    data = {
+        'bags': 5,
+        'categories': [category.id for category in categories[:2]],
+        'organization': organization.id,
+        'address': 'Test Address',
+        'city': 'Test City',
+        'postcode': '12345',
+        'phone': '1234567890',
+        'time': str(time(10, 30)),
+        'more_info': 'Some additional information'
+    }
+    url = reverse('AddDonation')
+    response = client.post(url, data)
+    assert response.status_code == 400
+    assert response.content.decode('utf-8') == "Missing required data"
+    assert Donation.objects.count() == initial_donation_count
+
+
+@pytest.mark.django_db
+def test_confirmation_view(user):
+    client = Client()
+    client.force_login(user)
+    url = reverse('FormConfirmation')
+    response = client.get(url)
+    assert response.status_code == 200
+    assertTemplateUsed(response, 'form-confirmation.html')
+
+
+@pytest.mark.django_db
+def test_confirmation_view_not_logged(user):
+    client = Client()
+    url = reverse('FormConfirmation')
+    response = client.get(url)
+    assert response.status_code == 302
+    assert response.url.startswith(reverse('Login'))
+    assert 'next=/donation/form-confirmation/' in response.url
