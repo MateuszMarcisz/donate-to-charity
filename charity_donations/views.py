@@ -6,7 +6,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import models
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.views import View
 
@@ -74,7 +74,16 @@ class AddDonationView(LoginRequiredMixin, View):
         date = request.POST.get('date')
         time = request.POST.get('time')
         more_info = request.POST.get('more_info')
-        organization = Institution.objects.get(pk=organization_id)
+        # organization = Institution.objects.get(pk=organization_id)
+
+        # If user is nasty and does something to the form using dev tools or JS
+        if not (bags and categories_ids and organization_id and address and city and postcode and phone and date and time):
+            return HttpResponseBadRequest("Missing required data")
+
+        try:
+            organization = Institution.objects.get(pk=organization_id)
+        except Institution.DoesNotExist:
+            return HttpResponseBadRequest("Invalid organization id")
 
         try:
             donation = Donation.objects.create(
@@ -97,7 +106,7 @@ class AddDonationView(LoginRequiredMixin, View):
             return render(request, 'form.html', {'error_message': str(e)})
 
 
-class FormConfirmationView(View):
+class FormConfirmationView(LoginRequiredMixin, View):
     def get(self, request):
         return render(request, 'form-confirmation.html')
 
