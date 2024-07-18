@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", function () {
     /**
      * HomePage - Help section
@@ -90,6 +89,15 @@ document.addEventListener("DOMContentLoaded", function () {
     if (helpSection !== null) {
         new Help(helpSection);
     }
+    // Date restriction
+    const dateInput = document.getElementById('date');
+
+    // Get today's date in ISO format (YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0];
+
+    // Set the minimum attribute of the date input to today's date
+    dateInput.setAttribute('min', today);
+
 
     /**
      * Form Select
