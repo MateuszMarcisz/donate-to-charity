@@ -4,9 +4,10 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import models
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.views import View
 
@@ -74,7 +75,16 @@ class AddDonationView(LoginRequiredMixin, View):
         date = request.POST.get('date')
         time = request.POST.get('time')
         more_info = request.POST.get('more_info')
-        organization = Institution.objects.get(pk=organization_id)
+        # organization = Institution.objects.get(pk=organization_id)
+
+        # If user is nasty and does something to the form using dev tools or JS
+        if not (bags and categories_ids and organization_id and address and city and postcode and phone and date and time):
+            return HttpResponseBadRequest("Missing required data")
+
+        try:
+            organization = Institution.objects.get(pk=organization_id)
+        except Institution.DoesNotExist:
+            return HttpResponseBadRequest("Invalid organization id")
 
         try:
             donation = Donation.objects.create(
@@ -97,7 +107,7 @@ class AddDonationView(LoginRequiredMixin, View):
             return render(request, 'form.html', {'error_message': str(e)})
 
 
-class FormConfirmationView(View):
+class FormConfirmationView(LoginRequiredMixin, View):
     def get(self, request):
         return render(request, 'form-confirmation.html')
 
@@ -133,20 +143,29 @@ class RegisterView(View):
         return render(request, 'register.html')
 
     def post(self, request):
-        first_name = request.POST.get('name')
-        last_name = request.POST.get('surname')
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        password2 = request.POST.get('password2')
-        if password != "" and password == password2:
-            if User.objects.filter(username=username).exists():
-                return render(request, 'register.html', {'error': 'Użytkownik o podanym adresie email już istnieje'})
-            u = User(username=username, email=email, first_name=first_name, last_name=last_name)
-            u.set_password(password)
-            u.save()
-            return redirect('Login')
-        return render(request, 'register.html', {'error': 'Hasła nie są zgodne'})
+        first_name = request.POST.get('name', '').strip()
+        last_name = request.POST.get('surname', '').strip()
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        password2 = request.POST.get('password2', '').strip()
+
+        if not first_name or not last_name or not username or not email or not password or not password2:
+            return render(request, 'register.html', {'error': 'Wszystkie pola są wymagane!'})
+
+        if password != password2:
+            return render(request, 'register.html', {'error': 'Hasła nie są zgodne!'})
+
+        if User.objects.filter(email=email).exists():
+            return render(request, 'register.html', {'error': 'Użytkownik o podanym adresie email już istnieje!'})
+
+        if User.objects.filter(username=username).exists():
+            return render(request, 'register.html', {'error': 'Użytkownik o takiej nazwie już istnieje!'})
+
+        u = User(username=username, email=email, first_name=first_name, last_name=last_name)
+        u.set_password(password)
+        u.save()
+        return redirect('Login')
 
 
 class ProfileView(LoginRequiredMixin, View):
@@ -173,12 +192,8 @@ class ProfileView(LoginRequiredMixin, View):
 class SettingsView(LoginRequiredMixin, View):
     def get(self, request):
         user = request.user
-        # update_info_form = UpdateInfoForm(instance=user)
-        # change_password_form = ChangePasswordForm()
         context = {
             'user': user,
-            # 'update_info_form': update_info_form,
-            # 'change_password_form': change_password_form,
         }
         return render(request, 'settings.html', context)
 
@@ -191,10 +206,15 @@ class SettingsView(LoginRequiredMixin, View):
         form_type = request.POST.get('form_type')
         change_password = request.POST.get('change_password')
         change_password2 = request.POST.get('change_password2')
+        password_entered = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
 
         if form_type == 'update_info':
-            password_entered = request.POST.get('password')
-            if user.check_password(password_entered):
+            if not all([username, email, first_name, last_name, password_entered]):
+                messages.error(request, 'Wszystkie pola muszą być wypełnione.')
+            elif not user.check_password(password_entered):
+                messages.error(request, 'Nieprawidłowe hasło użytkownika!')
+            else:
                 try:
                     user.username = username
                     user.email = email
@@ -203,31 +223,32 @@ class SettingsView(LoginRequiredMixin, View):
                     user.save()
                     messages.success(request, 'Twoje dane zostały zmienione!')
                     return redirect('Settings')
-                except Exception as e:
-                    messages.error(request,
-                                   'Incorrect password. Please enter your current password to update your information.')
-            else:
-                messages.error(request,
-                               'Nieprawidłowe hasło użytkownika!')
+                except Exception:
+                    messages.error(request, 'Wystąpił błąd podczas aktualizacji danych.')
 
-        if form_type == 'update_password':
-            confirm_password = request.POST.get('confirm_password')
-            if user.check_password(confirm_password):
-                if change_password == change_password2:
+        elif form_type == 'update_password':
+            if not all([change_password, change_password2, confirm_password]):
+                messages.error(request, 'Wszystkie pola muszą być wypełnione.')
+            elif not user.check_password(confirm_password):
+                messages.error(request, 'Nieprawidłowe hasło użytkownika!')
+            elif change_password != change_password2:
+                messages.error(request, 'Nowe hasła nie są zgodne')
+            else:
+                try:
                     user.set_password(change_password)
                     user.save()
+                    update_session_auth_hash(request, user)  # Keep the user logged in with the new password
                     messages.success(request, 'Twoje hasło zostało zmienione!')
-                else:
-                    messages.error(request, 'Nowe hasła nie są zgodne')
+                    return redirect('Settings')
+                except Exception:
+                    messages.error(request, 'Wystąpił błąd podczas aktualizacji hasła.')
 
-            else:
-                messages.error(request, 'Nieprawidłowe hasło użytkownika!')
-
-        # else:
-        #     messages.error(request,
-        #                    'There was an error updating your information. Please correct the errors below.')
+        else:
+            messages.error(request, 'Nieprawidłowy typ formularza.')
 
         context = {
             'user': user,
         }
         return render(request, 'settings.html', context)
+
+
