@@ -133,20 +133,30 @@ class RegisterView(View):
         return render(request, 'register.html')
 
     def post(self, request):
-        first_name = request.POST.get('name')
-        last_name = request.POST.get('surname')
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        password2 = request.POST.get('password2')
-        if password != "" and password == password2:
-            if User.objects.filter(username=username).exists():
-                return render(request, 'register.html', {'error': 'Użytkownik o podanym adresie email już istnieje'})
-            u = User(username=username, email=email, first_name=first_name, last_name=last_name)
-            u.set_password(password)
-            u.save()
-            return redirect('Login')
-        return render(request, 'register.html', {'error': 'Hasła nie są zgodne'})
+        first_name = request.POST.get('name', '').strip()
+        last_name = request.POST.get('surname', '').strip()
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        password2 = request.POST.get('password2', '').strip()
+
+        if not first_name or not last_name or not username or not email or not password or not password2:
+            return render(request, 'register.html', {'error': 'Wszystkie pola są wymagane!'})
+
+        if password != password2:
+            return render(request, 'register.html', {'error': 'Hasła nie są zgodne!'})
+
+        if User.objects.filter(email=email).exists():
+            return render(request, 'register.html', {'error': 'Użytkownik o podanym adresie email już istnieje!'})
+
+        if User.objects.filter(username=username).exists():
+            return render(request, 'register.html', {'error': 'Użytkownik o takiej nazwie już istnieje!'})
+
+        u = User(username=username, email=email, first_name=first_name, last_name=last_name)
+        u.set_password(password)
+        u.save()
+        return redirect('Login')
+
 
 
 class ProfileView(LoginRequiredMixin, View):
