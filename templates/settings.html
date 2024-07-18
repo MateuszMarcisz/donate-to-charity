@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+<header class="header--main-page">
+    {% block navbar %}
+        {{ block.super }}
+    {% endblock %}
+
+    {% block header_help %}
+        <div class="background-picture">
+            <div>
+                <h2>Ustawienia</h2>
+            </div>
+
+            {% if messages %}
+                <ul class="messages">
+                    {% for message in messages %}
+                        <p class="{{ message.tags }}"> {{ message }}</p>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            <div class="inline-container">
+                <div class="container-profile">
+                    <div class="info-title">
+                        <p>Zmień Informacje</p>
+                    </div>
+                    <form method="post" class="custom-form" name="update_info_form">
+                        <input type="hidden" name="form_type" value="update_info">
+                        {% csrf_token %}
+                        <div class="info-details-edit center-text font-size-1-5rem">
+                            <div>
+                                <label for="username">Zmień Nazwę Użytkownika</label>
+                                <input id="username" type="text" name="username" value="{{ user.username }}" required>
+                            </div>
+                            <div>
+                                <label for="email">Zmień Email</label>
+                                <input id="email" type="email" name="email" value="{{ user.email }}" required>
+                            </div>
+                            <div>
+                                <label for="first_name">Zmień Imię</label>
+                                <input id="first_name" type="text" name="first_name" value="{{ user.first_name }}"
+                                       required>
+                            </div>
+                            <div>
+                                <label for="surname">Zmień Nazwisko</label>
+                                <input id="surname" type="text" name="last_name" value="{{ user.last_name }}" required>
+                            </div>
+                            <div>
+                                <label for="password">Podaj hasło, aby uwierzytelnić zmiany</label>
+                                <input id="password" type="password" name="password" placeholder="Podaj hasło" required>
+                            </div>
+
+                            <!-- Placeholder for info update messages -->
+
+
+                            <div class="submit-button-container">
+                                <button type="submit">Zapisz zmiany</button>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+
+                <div class="container-profile">
+                    <div class="info-title">
+                        <p>Zmień hasło</p>
+                    </div>
+                    <form method="post" class="custom-form" name="change_password_form">
+                        <input type="hidden" name="form_type" value="update_password">
+                        {% csrf_token %}
+                        <div class="info-details-edit center-text font-size-1-5rem">
+                            <div>
+                                <label for="change_password">Podaj nowe hasło</label>
+                                <input id="change_password" type="password" name="change_password"
+                                       placeholder="Podaj hasło"
+                                       required>
+                            </div>
+                            <div>
+                                <label for="change_password2">Potwórz nowe hasło</label>
+                                <input id="change_password2" type="password" name="change_password2"
+                                       placeholder="Potwórz hasło"
+                                       required>
+                            </div>
+                            <div>
+                                <label for="confirm_password">Podaj stare hasło, aby uwierzytelnić zmiany</label>
+                                <input id="confirm_password" type="password" name="confirm_password"
+                                       placeholder="Podaj stare hasło" required>
+                            </div>
+
+                            <div class="submit-button-container">
+                                <button type="submit">Zapisz zmiany</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endblock %}
+</header>

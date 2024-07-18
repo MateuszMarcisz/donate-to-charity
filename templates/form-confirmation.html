@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block header %}
+    <header class="header--form-page">
+        {% block navbar %}
+            {{ block.super }}
+        {% endblock %}
+
+        <div class="slogan container container--90">
+            <h2>
+                Dziękujemy, za przesłanie formularza Na maila prześlemy wszelkie
+                informacje o odbiorze.
+            </h2>
+        </div>
+    </header>
+
+    {#    <script src="js/app.js"></script>#}
+{% endblock %}
+
+
+
