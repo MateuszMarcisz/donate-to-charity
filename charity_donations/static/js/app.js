@@ -185,7 +185,7 @@ document.addEventListener("DOMContentLoaded", function () {
     /**
      * Switching between form steps
      */
-    class FormSteps {
+ class FormSteps {
         constructor(form) {
             this.$form = form;
             this.$next = form.querySelectorAll(".next-step");
@@ -217,6 +217,10 @@ document.addEventListener("DOMContentLoaded", function () {
                         alert("Wybierz co najmniej jedną kategorię.");
                         return;
                     }
+                    if (this.currentStep === 2 && !this.validateStep2()) {
+                        alert("Podaj liczbę 60l worków.");
+                        return;
+                    }
                     this.currentStep++;
                     this.updateForm();
                 });
@@ -239,6 +243,14 @@ document.addEventListener("DOMContentLoaded", function () {
                     this.updateNextButtonState(); // Update button state when categories change
                 });
             });
+
+            // Handle bags input change
+            const bagsInput = document.querySelector('[name="bags"]');
+            if (bagsInput) {
+                bagsInput.addEventListener("input", () => {
+                    this.updateNextButtonState();
+                });
+            }
 
             this.updateNextButtonState(); // Initialize button state on form load
         }
@@ -267,12 +279,28 @@ document.addEventListener("DOMContentLoaded", function () {
             return document.querySelectorAll('[name="categories"]:checked').length > 0;
         }
 
+        validateStep2() {
+            // Check if bags input is a positive integer
+            const bagsValue = document.querySelector('[name="bags"]').value;
+            return bagsValue > 0 && Number.isInteger(parseFloat(bagsValue));
+        }
+
         updateNextButtonState() {
-            const nextButton = document.querySelector('div[data-step="1"] .next-step');
-            if (this.validateStep1()) {
-                nextButton.removeAttribute("disabled");
-            } else {
-                nextButton.setAttribute("disabled", "disabled");
+            const nextButtonStep1 = document.querySelector('div[data-step="1"] .next-step');
+            const nextButtonStep2 = document.querySelector('div[data-step="2"] .next-step');
+            if (nextButtonStep1) {
+                if (this.validateStep1()) {
+                    nextButtonStep1.removeAttribute("disabled");
+                } else {
+                    nextButtonStep1.setAttribute("disabled", "disabled");
+                }
+            }
+            if (nextButtonStep2) {
+                if (this.validateStep2()) {
+                    nextButtonStep2.removeAttribute("disabled");
+                } else {
+                    nextButtonStep2.setAttribute("disabled", "disabled");
+                }
             }
         }
 
