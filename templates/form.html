@@ -65,7 +65,7 @@
             <div class="form--steps-counter">Krok <span>1</span>/5</div>
 
             <form action="{% url 'AddDonation' %}" method="post">
-            {% csrf_token %}
+                {% csrf_token %}
                 <!-- STEP 1 -->
                 <div data-step="1" class="active">
                     <h3>Zaznacz, co chcesz oddać:</h3>
@@ -97,7 +97,7 @@
                     <div class="form-group form-group--inline">
                         <label>
                             Liczba 60l worków:
-                            <input type="number" id="bags" name="bags" step="1" min="1"/>
+                            <input type="number" id="bags" name="bags" step="1" min="1" max="100"/>
                         </label>
                     </div>
 
