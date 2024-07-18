@@ -6,56 +6,61 @@
     {% endblock %}
 
     {% block header_help %}
-        <div>
-            <h2>Mój Profil</h2>
-        </div>
+        <div class="background-picture">
+            <div>
+                <h2>Mój Profil</h2>
+            </div>
 
-        <div class="container-profile">
-            <div class="info-title">
-                <p>Informacje</p>
+            <div class="container-profile">
+                <div class="info-title">
+                    <p>Informacje</p>
+                </div>
+                <div class="info-details center-text">
+                    <p><strong>Użytkownik</strong><br> {{ user }}</p><br>
+                    <p><strong>Email</strong><br> {{ user.email }}</p><br>
+                    <p><strong>Imię</strong> <br>{{ user.first_name }}</p><br>
+                    <p><strong>Nazwisko</strong> <br> {{ user.last_name }}</p>
+                </div>
             </div>
-            <div class="info-details center-text">
-                <p><strong>Użytkownik</strong><br> {{ user }}</p><br>
-                <p><strong>Email</strong><br> {{ user.email }}</p><br>
-                <p><strong>Imię</strong> <br>{{ user.first_name }}</p><br>
-                <p><strong>Nazwisko</strong> <br> {{ user.last_name }}</p>
-            </div>
-        </div>
 
-        <div class="custom-container-profile">
-            <div class="info-title">
-                <p>Przekazane dary</p>
-            </div>
-            <div class="custom-info-details">
-                {% if donations %}
-                    <form method="post" class="custom-form">
-                        {% csrf_token %}
-                        <ul class="custom-donation-list">
-                            {% for donation in donations %}
-                                <li class="custom-donation-item {% if donation.is_taken %}taken{% endif %}">
-                                    <div class="to-the-right">
-                                        <label for="is_taken_{{ donation.id }}" style="margin-right: 10px;">Odebrane</label>
-                                        <input type="checkbox" id="is_taken_{{ donation.id }}" name="is_taken_{{ donation.id }}" value="true" {% if donation.is_taken %}checked{% endif %}>
-                                    </div>
-                                    <p><strong>Worki przekazane:</strong> {{ donation.quantity }}</p>
-                                    <p><strong>Organizacja:</strong> {{ donation.institution.name }}</p>
-                                    <p><strong>Kategorie:</strong>
-                                        {% for category in donation.categories.all %}
-                                            {{ category.name }}{% if not forloop.last %}, {% endif %}
-                                        {% endfor %}
-                                    </p>
-                                    <p><strong>Data odbioru:</strong> {{ donation.pick_up_date }}</p>
-                                    <p><strong>Godzina odbioru:</strong> {{ donation.pick_up_time }}</p>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                        <div class="submit-button-container">
-                            <button type="submit">Zapisz zmiany</button>
-                        </div>
-                    </form>
-                {% else %}
-                    <p>Brak przekazanych darów.</p>
-                {% endif %}
+            <div class="custom-container-profile">
+                <div class="info-title">
+                    <p>Przekazane dary</p>
+                </div>
+                <div class="custom-info-details">
+                    {% if donations %}
+                        <form method="post" class="custom-form">
+                            {% csrf_token %}
+                            <ul class="custom-donation-list">
+                                {% for donation in donations %}
+                                    <li class="custom-donation-item {% if donation.is_taken %}taken{% endif %}">
+                                        <div class="to-the-right">
+                                            <label for="is_taken_{{ donation.id }}"
+                                                   style="margin-right: 10px;">Odebrane</label>
+                                            <input type="checkbox" id="is_taken_{{ donation.id }}"
+                                                   name="is_taken_{{ donation.id }}" value="true"
+                                                   {% if donation.is_taken %}checked{% endif %}>
+                                        </div>
+                                        <p><strong>Worki przekazane:</strong> {{ donation.quantity }}</p>
+                                        <p><strong>Organizacja:</strong> {{ donation.institution.name }}</p>
+                                        <p><strong>Kategorie:</strong>
+                                            {% for category in donation.categories.all %}
+                                                {{ category.name }}{% if not forloop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </p>
+                                        <p><strong>Data odbioru:</strong> {{ donation.pick_up_date }}</p>
+                                        <p><strong>Godzina odbioru:</strong> {{ donation.pick_up_time }}</p>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                            <div class="submit-button-container">
+                                <button type="submit">Zapisz zmiany</button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <p>Brak przekazanych darów.</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
     {% endblock %}
