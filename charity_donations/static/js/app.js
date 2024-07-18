@@ -185,7 +185,7 @@ document.addEventListener("DOMContentLoaded", function () {
     /**
      * Switching between form steps
      */
- class FormSteps {
+    class FormSteps {
         constructor(form) {
             this.$form = form;
             this.$next = form.querySelectorAll(".next-step");
@@ -213,16 +213,10 @@ document.addEventListener("DOMContentLoaded", function () {
             this.$next.forEach(btn => {
                 btn.addEventListener("click", e => {
                     e.preventDefault();
-                    if (this.currentStep === 1 && !this.validateStep1()) {
-                        alert("Wybierz co najmniej jedną kategorię.");
-                        return;
+                    if (this.validateStep()) {
+                        this.currentStep++;
+                        this.updateForm();
                     }
-                    if (this.currentStep === 2 && !this.validateStep2()) {
-                        alert("Podaj liczbę 60l worków.");
-                        return;
-                    }
-                    this.currentStep++;
-                    this.updateForm();
                 });
             });
 
@@ -240,7 +234,14 @@ document.addEventListener("DOMContentLoaded", function () {
                     this.categories = Array.from(document.querySelectorAll('[name="categories"]:checked')).map(el => el.value);
                     this.filterOrganizations();
                     this.populateSummary(); // Update summary when categories change
-                    this.updateNextButtonState(); // Update button state when categories change
+                    this.validateStep(); // Validate step when categories change
+                });
+            });
+
+            // Handle organization selection change
+            document.querySelectorAll('[name="organization"]').forEach(el => {
+                el.addEventListener("change", () => {
+                    this.validateStep();
                 });
             });
 
@@ -248,11 +249,9 @@ document.addEventListener("DOMContentLoaded", function () {
             const bagsInput = document.querySelector('[name="bags"]');
             if (bagsInput) {
                 bagsInput.addEventListener("input", () => {
-                    this.updateNextButtonState();
+                    this.validateStep();
                 });
             }
-
-            this.updateNextButtonState(); // Initialize button state on form load
         }
 
         updateForm() {
@@ -274,36 +273,6 @@ document.addEventListener("DOMContentLoaded", function () {
             this.populateSummary(); // Update summary on form step change
         }
 
-        validateStep1() {
-            // Check if at least one category is selected
-            return document.querySelectorAll('[name="categories"]:checked').length > 0;
-        }
-
-        validateStep2() {
-            // Check if bags input is a positive integer
-            const bagsValue = document.querySelector('[name="bags"]').value;
-            return bagsValue > 0 && Number.isInteger(parseFloat(bagsValue));
-        }
-
-        updateNextButtonState() {
-            const nextButtonStep1 = document.querySelector('div[data-step="1"] .next-step');
-            const nextButtonStep2 = document.querySelector('div[data-step="2"] .next-step');
-            if (nextButtonStep1) {
-                if (this.validateStep1()) {
-                    nextButtonStep1.removeAttribute("disabled");
-                } else {
-                    nextButtonStep1.setAttribute("disabled", "disabled");
-                }
-            }
-            if (nextButtonStep2) {
-                if (this.validateStep2()) {
-                    nextButtonStep2.removeAttribute("disabled");
-                } else {
-                    nextButtonStep2.setAttribute("disabled", "disabled");
-                }
-            }
-        }
-
         filterOrganizations() {
             const organizations = document.querySelectorAll('[name="organization"]');
 
@@ -322,7 +291,7 @@ document.addEventListener("DOMContentLoaded", function () {
             // Collect form data and populate summary section
             const bags = document.querySelector('[name="bags"]').value;
             const categories = Array.from(document.querySelectorAll('[name="categories"]:checked'))
-                          .map(el => el.parentElement.querySelector('.description').innerText.trim());
+                .map(el => el.parentElement.querySelector('.description').innerText.trim());
             const organization = document.querySelector('[name="organization"]:checked');
             const address = document.querySelector('[name="address"]').value;
             const city = document.querySelector('[name="city"]').value;
@@ -351,6 +320,35 @@ document.addEventListener("DOMContentLoaded", function () {
             console.log(organizationText);
         }
 
+        validateStep() {
+            let isValid = true;
+
+            // Validation for step 1 (categories)
+            if (this.currentStep === 1) {
+                const selectedCategories = document.querySelectorAll('[name="categories"]:checked');
+                isValid = selectedCategories.length > 0;
+            }
+
+            // Validation for step 2 (bags)
+            if (this.currentStep === 2) {
+                const bagsInput = document.querySelector('[name="bags"]');
+                isValid = bagsInput && bagsInput.value > 0;
+            }
+
+            // Validation for step 3 (organization)
+            if (this.currentStep === 3) {
+                const selectedOrganization = document.querySelector('[name="organization"]:checked');
+                isValid = !!selectedOrganization;
+            }
+
+            const nextButton = this.$form.querySelector('.next-step');
+            if (nextButton) {
+                nextButton.disabled = !isValid;
+            }
+
+            return isValid;
+        }
+
         submit(e) {
             e.preventDefault();
             // Implement validation if needed
@@ -369,3 +367,4 @@ document.addEventListener("DOMContentLoaded", function () {
         new FormSteps(form);
     }
 });
+
