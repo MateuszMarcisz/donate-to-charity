@@ -5,7 +5,9 @@ source = my_project
 [report]
 omit =
     *tests*
-    */migrations/
+    */migrations/*
     *conftest*
     config/*
     manage.py
+    apps.py
+    test_views.py
