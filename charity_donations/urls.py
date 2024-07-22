@@ -11,4 +11,6 @@ urlpatterns = [
     path('donation/form-confirmation/', views.FormConfirmationView.as_view(), name='FormConfirmation'),
     path('profile/', views.ProfileView.as_view(), name='Profile'),
     path('settings/', views.SettingsView.as_view(), name='Settings'),
+
+    path('activate/<uidb64>/<token>/', views.ActivateAccountView.as_view(), name='ActivateAccount'),
 ]
