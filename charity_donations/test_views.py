@@ -4,6 +4,7 @@ from datetime import date, time
 import pytest
 from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
+from django.core import mail
 from django.core.paginator import Paginator
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -49,6 +50,59 @@ def test_login_view_wrong_username(user):
     assert response.url == reverse('Register')
 
 
+@pytest.mark.django_db
+def test_login_view_inactive_user(user):
+    user.is_active = False
+    user.save()
+
+    client = Client()
+    url = reverse('Login')
+    response = client.post(url, {'username': user.username, 'password': 'test password'})
+
+    assert response.status_code == 200
+    assertContains(response,
+                   "Twoje konto nie zostało aktywowane. Proszę, sprawdź swojego maila i aktywuj konto poprzez kliknięcie w link aktywacyjny.")
+    assert 'error' in response.context
+    assert response.context[
+               'error'] == "Twoje konto nie zostało aktywowane. Proszę, sprawdź swojego maila i aktywuj konto poprzez kliknięcie w link aktywacyjny."
+
+
+@pytest.mark.django_db
+def test_login_redirect_for_inactive_user(user):
+    user.is_active = False
+    user.save()
+
+    client = Client()
+    url = reverse('Login')
+    response = client.post(url, {'username': user.username, 'password': 'test password'}, follow=True)
+
+    assert response.status_code == 200
+    assert 'Twoje konto nie zostało aktywowane. Proszę, sprawdź swojego maila i aktywuj konto poprzez kliknięcie w link aktywacyjny.' in response.content.decode(
+        'utf-8')
+
+
+@pytest.mark.django_db
+def test_login_view_changing_user_status_active(user):
+    user.is_active = False
+    user.save()
+
+    client = Client()
+    url = reverse('Login')
+    response = client.post(url, {'username': user.username, 'password': 'test password'})
+
+    assert response.status_code == 200
+    assertContains(response,
+                   "Twoje konto nie zostało aktywowane. Proszę, sprawdź swojego maila i aktywuj konto poprzez kliknięcie w link aktywacyjny.")
+    assert 'error' in response.context
+    assert response.context[
+               'error'] == "Twoje konto nie zostało aktywowane. Proszę, sprawdź swojego maila i aktywuj konto poprzez kliknięcie w link aktywacyjny."
+
+    user.is_active = True
+    user.save()
+    response = client.post(url, {'username': user.username, 'password': user.password})
+    assert response.status_code == 200
+
+
 def test_logout_view():
     client = Client()
     url = reverse('Logout')
@@ -87,6 +141,24 @@ def test_register_view_post():
     assert response.status_code == 302
     assert response.url == reverse('Login')
     assert User.objects.get(username='test user')
+
+    # checking for the message
+    assert User.objects.filter(username='test user').exists()
+    messages = list(get_messages(response.wsgi_request))
+    assert len(messages) == 1
+    assert str(messages[0]) == 'Prosimy o potwierdzenie konta poprzez link wysłany na podane w rejestracji adres email.'
+
+    # checking if email was send
+    assert len(mail.outbox) == 1
+    email = mail.outbox[0]
+    assert email.subject == 'Activate your account.'
+
+    # checking for the correct content of email
+    email_body = email.body
+    assert 'Hello test,' in email_body
+    assert 'Please click the link below to activate your account:' in email_body
+    assert 'http://testserver/activate/' in email_body  # Checking that activation link is in the email
+    assert 'Thank you!' in email_body
 
 
 @pytest.mark.django_db
