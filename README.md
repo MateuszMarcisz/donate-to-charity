@@ -1,5 +1,3 @@
-<i>*work in progress</i>
-
 <h1 align="center">Welcome to my <strong>Donate to Charity</strong> project.</h1>
 
 ## Description
@@ -21,10 +19,12 @@ I was given part of the front-end (some of the styling and pictures). What I've 
 - **Framework:** Django
 - **Languages:** Python, JS, CSS, HTML
 - **Database:** PostgreSQL
-- **Other**: pytest/pytest-django, venv
+- **Other**: pytest/pytest-django/pytest-cov, venv
 
 ## Tests:
-TBD (soon)
+Test were done using pytest django and cov for producing coverage report. All the details regarding tests can be found in the `test_views.py` file. <br>
+Here is the coverage report:
+![test coverage raport](charity_donations/static/images/visual_coverage_raport.png)
 
 
 ## Visualisation:

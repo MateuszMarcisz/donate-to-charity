@@ -4,15 +4,22 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db import models
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
+from django.template.loader import render_to_string
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views import View
 
 # from charity_donations.forms import ChangePasswordForm
 from charity_donations.models import Donation, Institution, Category
+from config import settings
 
 
 # Create your views here.
@@ -78,7 +85,8 @@ class AddDonationView(LoginRequiredMixin, View):
         # organization = Institution.objects.get(pk=organization_id)
 
         # If user is nasty and does something to the form using dev tools or JS
-        if not (bags and categories_ids and organization_id and address and city and postcode and phone and date and time):
+        if not (
+                bags and categories_ids and organization_id and address and city and postcode and phone and date and time):
             return HttpResponseBadRequest("Missing required data")
 
         try:
@@ -120,14 +128,43 @@ class LoginView(View):
         username = request.POST['username']
         password = request.POST['password']
 
-        user = authenticate(username=username, password=password)
-        if user is not None:
-            redirect_url = request.GET.get('next', 'LandingPage')
-            login(request, user)
-            return redirect(redirect_url)
+        # user = authenticate(username=username, password=password)
+        # if user is not None:
+        #     if user.is_active:
+        #         redirect_url = request.GET.get('next', 'LandingPage')
+        #         login(request, user)
+        #         return redirect(redirect_url)
+        #     else:
+        #         error = ("""Twoje konto nie zostało aktywowane. Proszę, sprawdź swojego maila i aktywuj konto poprzez
+        #                  kliknięcie w link aktywacyjny.""")
+        #         return render(request, "login.html", {'error': error})
+        # else:
+        #     if not User.objects.filter(username=username).exists():
+        #         return redirect('Register')
+        #     error = "Nieprawidłowa nazwa użytkownika lub hasło"
+        #     return render(request, "login.html", {'error': error})
+
+        # Needed different approach
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            # user does not exist, redirect to register
+            return redirect('Register')
+
+        # authentication
+        if user.check_password(password):
+            if user.is_active:
+                # when user is active
+                login(request, user)
+                redirect_url = request.GET.get('next', 'LandingPage')
+                return redirect(redirect_url)
+            else:
+                # when user is not active
+                error = ("Twoje konto nie zostało aktywowane. Proszę, sprawdź swojego maila i aktywuj konto "
+                         "poprzez kliknięcie w link aktywacyjny.")
+                return render(request, "login.html", {'error': error})
         else:
-            if not User.objects.filter(username=username).exists():
-                return redirect('Register')
+            # wrong pswrd
             error = "Nieprawidłowa nazwa użytkownika lub hasło"
             return render(request, "login.html", {'error': error})
 
@@ -162,10 +199,46 @@ class RegisterView(View):
         if User.objects.filter(username=username).exists():
             return render(request, 'register.html', {'error': 'Użytkownik o takiej nazwie już istnieje!'})
 
-        u = User(username=username, email=email, first_name=first_name, last_name=last_name)
+        # False in is_active only with email activation link
+        u = User(username=username, email=email, first_name=first_name, last_name=last_name, is_active=False)
         u.set_password(password)
         u.save()
+
+        # email account activation part
+
+        current_site = get_current_site(request)
+        mail_subject = 'Activate your account.'
+        uid = urlsafe_base64_encode(force_bytes(u.pk))
+        token = default_token_generator.make_token(u)
+        message = render_to_string('activation_email.html', {
+            'user': u,
+            'domain': current_site.domain,
+            'uid': uid,
+            'token': token,
+        })
+        send_mail(mail_subject, message, settings.DEFAULT_FROM_EMAIL, [email])
+
+        messages.success(request,
+                         'Prosimy o potwierdzenie konta poprzez link wysłany na podane w rejestracji adres email.')
         return redirect('Login')
+
+
+class ActivateAccountView(View):
+    def get(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
+
+        if user is not None and default_token_generator.check_token(user, token):
+            user.is_active = True
+            user.save()
+            messages.success(request, 'Twoje Konto zostało aktywowane, możesz się teraz zalogować.')
+            return redirect('Login')
+        else:
+            messages.error(request, 'Link aktywacyjny był niepoprawny!')
+            return redirect('Register')
 
 
 class ProfileView(LoginRequiredMixin, View):
@@ -250,5 +323,3 @@ class SettingsView(LoginRequiredMixin, View):
             'user': user,
         }
         return render(request, 'settings.html', context)
-
-
