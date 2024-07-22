@@ -2071,3 +2071,9 @@ footer .bottom-line--icons a img {
     background-repeat: no-repeat;
     background-position-x: right;
 }
+
+.label-password-reset {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+    margin-top: 20px;
+}
