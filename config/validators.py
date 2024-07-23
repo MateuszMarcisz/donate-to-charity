@@ -1,3 +1,5 @@
+import re
+
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 from django.contrib.auth.password_validation import (
@@ -54,3 +56,40 @@ class CustomNumericPasswordValidator(NumericPasswordValidator):
                 _("Twoje hasło nie może składać się wyłącznie z cyfr."),
                 code='password_entirely_numeric',
             )
+
+
+class CustomPasswordValidator:
+    """
+    Validator for checking password strength with additional requirements:
+    - At least one digit
+    - At least one special character
+    - At least one uppercase and one lowercase letter
+    """
+
+    def validate(self, password, user=None):
+        if not re.search(r'\d', password):
+            raise ValidationError(
+                _("Hasło musi zawierać co najmniej jedną cyfrę."),
+                code='password_no_digit',
+            )
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            raise ValidationError(
+                _("Hasło musi zawierać co najmniej jeden znak specjalny."),
+                code='password_no_special',
+            )
+        if not re.search(r'[a-z]', password):
+            raise ValidationError(
+                _("Hasło musi zawierać co najmniej jedną małą literę."),
+                code='password_no_lowercase',
+            )
+        if not re.search(r'[A-Z]', password):
+            raise ValidationError(
+                _("Hasło musi zawierać co najmniej jedną wielką literę."),
+                code='password_no_uppercase',
+            )
+
+    def get_help_text(self):
+        return _(
+            "Twoje hasło musi zawierać co najmniej jedną cyfrę, "
+            "jeden znak specjalny, jedną małą literę oraz jedną wielką literę."
+        )
