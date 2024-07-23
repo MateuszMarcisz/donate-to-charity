@@ -1,7 +1,9 @@
 import json
 from datetime import date, time
+from urllib.parse import urlparse
 
 import pytest
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.messages import get_messages
@@ -9,10 +11,12 @@ from django.core import mail
 from django.core.paginator import Paginator
 from django.test import TestCase, Client
 from django.urls import reverse
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from pytest_django.asserts import assertContains, assertTemplateUsed
 
+from charity_donations.admin import InstitutionAdmin
+from charity_donations.forms import CustomSetPasswordForm, RegistrationForm, PasswordChangeForm, UserUpdateForm
 from charity_donations.models import Donation, Institution
 
 
@@ -1022,17 +1026,18 @@ def test_settings_post_password_validation_errors(user):
     client.force_login(user)
     url = reverse('Settings')
 
-    # # Scenario 1: Password too short
-    # data = {
-    #     'form_type': 'update_password',
-    #     'change_password': 'short',
-    #     'change_password2': 'short',
-    #     'confirm_password': 'CurrentValidPassword1!'
-    # }
-    # response = client.post(url, data, follow=True)
-    # assert response.status_code == 200
-    # assert 'change_password' in response.context['password_form'].errors
-    # assert 'Hasło musi zawierać przynajmniej 8 znaków.' in response.context['password_form'].errors['change_password']
+    # Scenario 1: Password too short
+    data = {
+        'form_type': 'update_password',
+        'change_password': 'short',
+        'change_password2': 'short',
+        'confirm_password': 'CurrentValidPassword1!'
+    }
+    response = client.post(url, data, follow=True)
+    assert response.status_code == 200
+    assert 'change_password' in response.context['password_form'].errors
+    assert 'Twoje hasło musi zawierać przynajmniej 8 znaków.' in response.context['password_form'].errors[
+        'change_password']
 
     # Scenario 2: Password missing uppercase letter
     data = {
@@ -1108,3 +1113,297 @@ def test_settings_post_password_change_incorrect_current_password(user):
     form = response.context['password_form']
     assert form.errors
     assert 'Nieprawidłowe hasło użytkownika!' in form.errors.get('confirm_password', [])
+
+
+# testing admin.py
+@pytest.mark.django_db
+def test_institution_admin_list_display(user, institutions):
+    user.is_superuser = True
+    user.is_staff = True
+    user.save()
+
+    client = Client()
+    client.force_login(user)
+    url = reverse('admin:%s_%s_changelist' % (
+        Institution._meta.app_label, Institution._meta.model_name
+    ))
+    response = client.get(url)
+    assert response.status_code == 200
+    assert any(inst.name in response.content.decode() for inst in institutions)
+    assert any(inst.description in response.content.decode() for inst in institutions)
+
+    # searching
+    search_url = f"{url}?q=Institution 0"
+    response = client.get(search_url)
+    assert response.status_code == 200
+    assert 'Institution 0' in response.content.decode()
+
+    # Filtering
+    filter_url = f"{url}?type={Institution.FOUNDATION}"
+    response = client.get(filter_url)
+    assert response.status_code == 200
+    assert all(inst.type == Institution.FOUNDATION for inst in institutions)
+
+    admin_instance = InstitutionAdmin(Institution, admin.site)
+    for institution in institutions:
+        display = admin_instance.type_display(institution)
+        assert display == 'Fundacja'
+
+
+@pytest.mark.django_db
+def test_custom_password_reset_confirm_view(user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    client = Client()
+    url = reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+
+    response = client.get(url)
+    assert response.status_code == 302
+    redirect_url = response['Location']
+    expected_redirect_url = reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': 'set-password'})
+    parsed_redirect_url = urlparse(redirect_url)
+    parsed_expected_url = urlparse(expected_redirect_url)
+    response = client.get(redirect_url)
+    assert response.status_code == 200
+    assert 'new_password1' in response.content.decode()
+    assert 'new_password2' in response.content.decode()
+
+
+# testing forms.py
+
+@pytest.mark.django_db
+def test_custom_set_password_form(user):
+    user.set_password('InitialPassword1!')
+    user.save()
+
+    # Testing valid password change
+    form = CustomSetPasswordForm(user=user, data={
+        'new_password1': 'NewPassword1!',
+        'new_password2': 'NewPassword1!'
+    })
+    assert form.is_valid()
+    form.save()
+    assert user.check_password('NewPassword1!')
+
+    # Testing password mismatch
+    form = CustomSetPasswordForm(user=user, data={
+        'new_password1': 'NewPassword1!',
+        'new_password2': 'DifferentPassword2!'
+    })
+    assert not form.is_valid()
+    assert form.errors['new_password2'] == ['Nowe hasła nie są takie same.']
+
+    # Testing invalid password
+    form = CustomSetPasswordForm(user=user, data={
+        'new_password1': 'short',
+        'new_password2': 'short'
+    })
+    assert not form.is_valid()
+    assert 'new_password2' in form.errors
+
+
+@pytest.mark.django_db
+def test_registration_form(user):
+    # Testing valid registration
+    form = RegistrationForm(data={
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'username': 'johndoe',
+        'email': 'johndoe@example.com',
+        'password': 'ValidPassword1!',
+        'password2': 'ValidPassword1!'
+    })
+    assert form.is_valid()
+    user = form.save()
+    assert User.objects.filter(username='johndoe').exists()
+
+    # Testing password mismatch
+    form = RegistrationForm(data={
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'username': 'johndoe',
+        'email': 'johndoe@example.com',
+        'password': 'ValidPassword1!',
+        'password2': 'DifferentPassword1!'
+    })
+    assert not form.is_valid()
+    assert form.errors['password2'] == ['Hasła nie są zgodne!']
+
+    # Testing existing email
+    User.objects.create_user(username='existinguser', email='johndoe@example.com', password='Password1!')
+    form = RegistrationForm(data={
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'username': 'newuser',
+        'email': 'johndoe@example.com',
+        'password': 'ValidPassword1!',
+        'password2': 'ValidPassword1!'
+    })
+    assert not form.is_valid()
+    assert form.errors['email'] == ['Użytkownik o podanym adresie email już istnieje!']
+
+    # Testing existing username
+    form = RegistrationForm(data={
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'username': 'existinguser',
+        'email': 'newemail@example.com',
+        'password': 'ValidPassword1!',
+        'password2': 'ValidPassword1!'
+    })
+    assert not form.is_valid()
+    assert form.errors['username'] == ['Użytkownik o takiej nazwie już istnieje!']
+
+
+@pytest.mark.django_db
+def test_registration_form(user):
+    # Testing valid registration
+    form = RegistrationForm(data={
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'username': 'johndoe',
+        'email': 'johndoe@example.com',
+        'password': 'ValidPassword1!',
+        'password2': 'ValidPassword1!'
+    })
+    assert form.is_valid()
+    user = form.save()
+    assert User.objects.filter(username='johndoe').exists()
+
+    # Testing password mismatch
+    form = RegistrationForm(data={
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'username': 'johndoe',
+        'email': 'johndoe@example.com',
+        'password': 'ValidPassword1!',
+        'password2': 'DifferentPassword1!'
+    })
+    assert not form.is_valid()
+    assert form.errors['password2'] == ['Hasła nie są zgodne!']
+
+    # Testing existing email
+    User.objects.create_user(username='existinguser', email='johndoe@example.com', password='Password1!')
+    form = RegistrationForm(data={
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'username': 'newuser',
+        'email': 'johndoe@example.com',
+        'password': 'ValidPassword1!',
+        'password2': 'ValidPassword1!'
+    })
+    assert not form.is_valid()
+    assert form.errors['email'] == ['Użytkownik o podanym adresie email już istnieje!']
+
+    # Testing existing username
+    form = RegistrationForm(data={
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'username': 'existinguser',
+        'email': 'newemail@example.com',
+        'password': 'ValidPassword1!',
+        'password2': 'ValidPassword1!'
+    })
+    assert not form.is_valid()
+    assert form.errors['username'] == ['Użytkownik o takiej nazwie już istnieje!']
+
+
+@pytest.mark.django_db
+def test_password_change_form(user):
+    user.set_password('OldPassword1!')
+    user.save()
+
+    # Testing valid password change
+    form = PasswordChangeForm(user=user, data={
+        'change_password': 'NewPassword1!',
+        'change_password2': 'NewPassword1!',
+        'confirm_password': 'OldPassword1!'
+    })
+
+    if form.is_valid():
+        password = form.cleaned_data['change_password']
+        user.set_password(password)
+        user.save()
+
+    user.refresh_from_db()
+    assert user.check_password('NewPassword1!')
+
+    # Testing password mismatch
+    form = PasswordChangeForm(user=user, data={
+        'change_password': 'NewPassword1!',
+        'change_password2': 'DifferentPassword2!',
+        'confirm_password': 'OldPassword1!'
+    })
+    assert not form.is_valid()
+    assert form.errors['change_password2'] == ['Nowe hasła nie są zgodne.']
+
+    # Testing incorrect current password
+    form = PasswordChangeForm(user=user, data={
+        'change_password': 'NewPassword1!',
+        'change_password2': 'NewPassword1!',
+        'confirm_password': 'WrongPassword!'
+    })
+    assert not form.is_valid()
+    assert form.errors['confirm_password'] == ['Nieprawidłowe hasło użytkownika!']
+
+
+@pytest.mark.django_db
+def test_user_update_form(user):
+    user.set_password('OldPassword1!')
+    user.save()
+
+    # Testing valid update
+    form = UserUpdateForm(user=user, data={
+        'username': 'newusername',
+        'email': 'newemail@example.com',
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'password': 'OldPassword1!'
+    })
+    assert form.is_valid()
+    cleaned_data = form.cleaned_data
+    user.username = cleaned_data['username']
+    user.email = cleaned_data['email']
+    user.first_name = cleaned_data['first_name']
+    user.last_name = cleaned_data['last_name']
+    user.save()
+    user.refresh_from_db()
+    assert user.username == 'newusername'
+    assert user.email == 'newemail@example.com'
+    assert user.first_name == 'John'
+    assert user.last_name == 'Doe'
+
+    # Testing invalid password
+    form = UserUpdateForm(user=user, data={
+        'username': 'newusername',
+        'email': 'newemail@example.com',
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'password': 'WrongPassword!'
+    })
+    assert not form.is_valid()
+    assert form.errors['password'] == ['Nieprawidłowe hasło użytkownika!']
+
+    # Testing existing username
+    existing_user = User.objects.create_user(username='existinguser', email='existing@example.com',
+                                             password='Password1!')
+    form = UserUpdateForm(user=user, data={
+        'username': 'existinguser',
+        'email': 'newemail@example.com',
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'password': 'OldPassword1!'
+    })
+    assert not form.is_valid()
+    assert form.errors['username'] == ['Użytkownik o takiej nazwie już istnieje!']
+
+    # Testing existing email
+    form = UserUpdateForm(user=user, data={
+        'username': 'newusername',
+        'email': 'existing@example.com',
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'password': 'OldPassword1!'
+    })
+    assert not form.is_valid()
+    assert form.errors['email'] == ['Użytkownik o podanym adresie email już istnieje!']
