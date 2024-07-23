@@ -5,45 +5,94 @@
 {% endblock %}
 
 {% block content %}
-
-
     <section class="login-page">
         <h2>Załóż konto</h2>
         <form method="POST" action="">
             {% csrf_token %}
-            <div class="form-group">
-                <label for="name" class="visually-hidden">Imię</label>
-                <input type="text" id="name" name="name" placeholder="Imię" required/>
-            </div>
-            <div class="form-group">
-                <label for="surname" class="visually-hidden">Nazwisko</label>
-                <input type="text" id="surname" name="surname" placeholder="Nazwisko" required/>
-            </div>
-            <div class="form-group">
-                <label for="username" class="visually-hidden">Imię</label>
-                <input type="text" id="username" name="username" placeholder="Username" required/>
-            </div>
-            <div class="form-group">
-                <label for="email" class="visually-hidden">Email</label>
-                <input type="email" id="email" name="email" placeholder="Email" required/>
-            </div>
-            <div class="form-group">
-                <label for="password" class="visually-hidden">Hasło</label>
-                <input type="password" id="password" name="password" placeholder="Hasło" required/>
-            </div>
-            <div class="form-group">
-                <label for="password2" class="visually-hidden">Powtórz hasło</label>
-                <input type="password" id="password2" name="password2" placeholder="Powtórz hasło" required/>
-            </div>
-            {% if error %}
-                <div style="color:red">{{ error }}</div>
-            {% endif %}
 
+            <!-- First Name Field -->
+            <div class="form-group">
+                <label for="{{ form.first_name.id_for_label }}" class="visually-hidden">Imię</label>
+                <input type="text" id="{{ form.first_name.id_for_label }}" name="{{ form.first_name.html_name }}" value="{{ form.first_name.value|default_if_none:'' }}" class="form-control" placeholder="Imię" />
+                {% if form.first_name.errors %}
+                    <div class="error-message">
+                        {% for error in form.first_name.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Last Name Field -->
+            <div class="form-group">
+                <label for="{{ form.last_name.id_for_label }}" class="visually-hidden">Nazwisko</label>
+                <input type="text" id="{{ form.last_name.id_for_label }}" name="{{ form.last_name.html_name }}" value="{{ form.last_name.value|default_if_none:'' }}" class="form-control" placeholder="Nazwisko" />
+                {% if form.last_name.errors %}
+                    <div class="error-message">
+                        {% for error in form.last_name.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Username Field -->
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}" class="visually-hidden">Nazwa użytkownika</label>
+                <input type="text" id="{{ form.username.id_for_label }}" name="{{ form.username.html_name }}" value="{{ form.username.value|default_if_none:'' }}" class="form-control" placeholder="Username" />
+                {% if form.username.errors %}
+                    <div class="error-message">
+                        {% for error in form.username.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Email Field -->
+            <div class="form-group">
+                <label for="{{ form.email.id_for_label }}" class="visually-hidden">Email</label>
+                <input type="email" id="{{ form.email.id_for_label }}" name="{{ form.email.html_name }}" value="{{ form.email.value|default_if_none:'' }}" class="form-control" placeholder="Email" />
+                {% if form.email.errors %}
+                    <div class="error-message">
+                        {% for error in form.email.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Password Field -->
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}" class="visually-hidden">Hasło</label>
+                <input type="password" id="{{ form.password.id_for_label }}" name="{{ form.password.html_name }}" class="form-control" placeholder="Hasło" />
+                {% if form.password.errors %}
+                    <div class="error-message">
+                        {% for error in form.password.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Password2 Field -->
+            <div class="form-group">
+                <label for="{{ form.password2.id_for_label }}" class="visually-hidden">Powtórz hasło</label>
+                <input type="password" id="{{ form.password2.id_for_label }}" name="{{ form.password2.html_name }}" class="form-control" placeholder="Powtórz hasło" />
+                {% if form.password2.errors %}
+                    <div class="error-message">
+                        {% for error in form.password2.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Submit Button -->
             <div class="form-group form-group--buttons">
                 <a href="{% url 'Login' %}" class="btn btn--without-border">Zaloguj się</a>
                 <button class="btn" type="submit">Załóż konto</button>
             </div>
         </form>
     </section>
-
 {% endblock %}

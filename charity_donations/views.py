@@ -5,6 +5,7 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.views import PasswordResetConfirmView
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
@@ -17,6 +18,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views import View
 
+from charity_donations.forms import CustomSetPasswordForm, RegistrationForm
 # from charity_donations.forms import ChangePasswordForm
 from charity_donations.models import Donation, Institution, Category
 from config import settings
@@ -177,50 +179,41 @@ class LogoutView(View):
 
 class RegisterView(View):
     def get(self, request):
-        return render(request, 'register.html')
+        form = RegistrationForm()
+        return render(request, 'register.html', {'form': form})
 
     def post(self, request):
-        first_name = request.POST.get('name', '').strip()
-        last_name = request.POST.get('surname', '').strip()
-        username = request.POST.get('username', '').strip()
-        email = request.POST.get('email', '').strip()
-        password = request.POST.get('password', '').strip()
-        password2 = request.POST.get('password2', '').strip()
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            first_name = form.cleaned_data.get('first_name')
+            last_name = form.cleaned_data.get('last_name')
+            username = form.cleaned_data.get('username')
+            email = form.cleaned_data.get('email')
+            password = form.cleaned_data.get('password')
 
-        if not first_name or not last_name or not username or not email or not password or not password2:
-            return render(request, 'register.html', {'error': 'Wszystkie pola są wymagane!'})
+            # Save the user with inactive status
+            u = User(username=username, email=email, first_name=first_name, last_name=last_name, is_active=False)
+            u.set_password(password)
+            u.save()
 
-        if password != password2:
-            return render(request, 'register.html', {'error': 'Hasła nie są zgodne!'})
+            # Email account activation part
+            current_site = get_current_site(request)
+            mail_subject = 'Activate your account.'
+            uid = urlsafe_base64_encode(force_bytes(u.pk))
+            token = default_token_generator.make_token(u)
+            message = render_to_string('activation_email.html', {
+                'user': u,
+                'domain': current_site.domain,
+                'uid': uid,
+                'token': token,
+            })
+            send_mail(mail_subject, message, settings.DEFAULT_FROM_EMAIL, [email])
 
-        if User.objects.filter(email=email).exists():
-            return render(request, 'register.html', {'error': 'Użytkownik o podanym adresie email już istnieje!'})
+            messages.success(request,
+                             'Prosimy o potwierdzenie konta poprzez link wysłany na podane w rejestracji adres email.')
+            return redirect('Login')
 
-        if User.objects.filter(username=username).exists():
-            return render(request, 'register.html', {'error': 'Użytkownik o takiej nazwie już istnieje!'})
-
-        # False in is_active only with email activation link
-        u = User(username=username, email=email, first_name=first_name, last_name=last_name, is_active=False)
-        u.set_password(password)
-        u.save()
-
-        # email account activation part
-
-        current_site = get_current_site(request)
-        mail_subject = 'Activate your account.'
-        uid = urlsafe_base64_encode(force_bytes(u.pk))
-        token = default_token_generator.make_token(u)
-        message = render_to_string('activation_email.html', {
-            'user': u,
-            'domain': current_site.domain,
-            'uid': uid,
-            'token': token,
-        })
-        send_mail(mail_subject, message, settings.DEFAULT_FROM_EMAIL, [email])
-
-        messages.success(request,
-                         'Prosimy o potwierdzenie konta poprzez link wysłany na podane w rejestracji adres email.')
-        return redirect('Login')
+        return render(request, 'register.html', {'form': form})
 
 
 class ActivateAccountView(View):
@@ -323,3 +316,7 @@ class SettingsView(LoginRequiredMixin, View):
             'user': user,
         }
         return render(request, 'settings.html', context)
+
+
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
+    form_class = CustomSetPasswordForm
