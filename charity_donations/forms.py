@@ -6,6 +6,9 @@ from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.contrib.auth import password_validation
 
+from config.validators import CustomMinimumLengthValidator, CustomCommonPasswordValidator, \
+    CustomNumericPasswordValidator, CustomPasswordValidator
+
 
 class CustomSetPasswordForm(SetPasswordForm):
     error_messages = {
@@ -109,7 +112,7 @@ class PasswordChangeForm(forms.Form):
     change_password = forms.CharField(
         widget=forms.PasswordInput,
         label='Nowe hasło',
-        min_length=8
+        # min_length=8
     )
     change_password2 = forms.CharField(
         widget=forms.PasswordInput,
