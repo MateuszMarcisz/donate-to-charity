@@ -1,5 +1,7 @@
+<!-- settings.html -->
 {% extends 'base.html' %}
 
+{% block content %}
 <header class="header--main-page">
     {% block navbar %}
         {{ block.super }}
@@ -28,36 +30,66 @@
                         {% csrf_token %}
                         <div class="info-details-edit center-text font-size-1-5rem">
                             <div>
-                                <label for="username">Zmień Nazwę Użytkownika</label>
-                                <input id="username" type="text" name="username" value="{{ user.username }}" required>
+                                <label for="{{ user_update_form.username.id_for_label }}">Zmień Nazwę Użytkownika</label>
+                                <input id="{{ user_update_form.username.id_for_label }}" type="text" name="{{ user_update_form.username.html_name }}" value="{{ user_update_form.username.value|default_if_none:'' }}" required>
+                                {% if user_update_form.username.errors %}
+                                    <div class="error-message">
+                                        {% for error in user_update_form.username.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             <div>
-                                <label for="email">Zmień Email</label>
-                                <input id="email" type="email" name="email" value="{{ user.email }}" required>
+                                <label for="{{ user_update_form.email.id_for_label }}">Zmień Email</label>
+                                <input id="{{ user_update_form.email.id_for_label }}" type="email" name="{{ user_update_form.email.html_name }}" value="{{ user_update_form.email.value|default_if_none:'' }}" required>
+                                {% if user_update_form.email.errors %}
+                                    <div class="error-message">
+                                        {% for error in user_update_form.email.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             <div>
-                                <label for="first_name">Zmień Imię</label>
-                                <input id="first_name" type="text" name="first_name" value="{{ user.first_name }}"
-                                       required>
+                                <label for="{{ user_update_form.first_name.id_for_label }}">Zmień Imię</label>
+                                <input id="{{ user_update_form.first_name.id_for_label }}" type="text" name="{{ user_update_form.first_name.html_name }}" value="{{ user_update_form.first_name.value|default_if_none:'' }}" required>
+                                {% if user_update_form.first_name.errors %}
+                                    <div class="error-message">
+                                        {% for error in user_update_form.first_name.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             <div>
-                                <label for="surname">Zmień Nazwisko</label>
-                                <input id="surname" type="text" name="last_name" value="{{ user.last_name }}" required>
+                                <label for="{{ user_update_form.last_name.id_for_label }}">Zmień Nazwisko</label>
+                                <input id="{{ user_update_form.last_name.id_for_label }}" type="text" name="{{ user_update_form.last_name.html_name }}" value="{{ user_update_form.last_name.value|default_if_none:'' }}" required>
+                                {% if user_update_form.last_name.errors %}
+                                    <div class="error-message">
+                                        {% for error in user_update_form.last_name.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             <div>
-                                <label for="password">Podaj hasło, aby uwierzytelnić zmiany</label>
-                                <input id="password" type="password" name="password" placeholder="Podaj hasło" required>
+                                <label for="{{ user_update_form.password.id_for_label }}">Podaj hasło, aby uwierzytelnić zmiany</label>
+                                <input id="{{ user_update_form.password.id_for_label }}" type="password" name="{{ user_update_form.password.html_name }}" placeholder="Podaj hasło" required>
+                                {% if user_update_form.password.errors %}
+                                    <div class="error-message">
+                                        {% for error in user_update_form.password.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
-
-                            <!-- Placeholder for info update messages -->
-
 
                             <div class="submit-button-container">
                                 <button type="submit">Zapisz zmiany</button>
                             </div>
                         </div>
                     </form>
-
                 </div>
 
                 <div class="container-profile">
@@ -69,21 +101,37 @@
                         {% csrf_token %}
                         <div class="info-details-edit center-text font-size-1-5rem">
                             <div>
-                                <label for="change_password">Podaj nowe hasło</label>
-                                <input id="change_password" type="password" name="change_password"
-                                       placeholder="Podaj hasło"
-                                       required>
+                                <label for="{{ password_form.change_password.id_for_label }}">Podaj nowe hasło</label>
+                                <input id="{{ password_form.change_password.id_for_label }}" type="password" name="{{ password_form.change_password.html_name }}" placeholder="Podaj hasło" required>
+                                {% if password_form.change_password.errors %}
+                                    <div class="error-message">
+                                        {% for error in password_form.change_password.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             <div>
-                                <label for="change_password2">Potwórz nowe hasło</label>
-                                <input id="change_password2" type="password" name="change_password2"
-                                       placeholder="Potwórz hasło"
-                                       required>
+                                <label for="{{ password_form.change_password2.id_for_label }}">Potwórz nowe hasło</label>
+                                <input id="{{ password_form.change_password2.id_for_label }}" type="password" name="{{ password_form.change_password2.html_name }}" placeholder="Potwórz hasło" required>
+                                {% if password_form.change_password2.errors %}
+                                    <div class="error-message">
+                                        {% for error in password_form.change_password2.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             <div>
-                                <label for="confirm_password">Podaj stare hasło, aby uwierzytelnić zmiany</label>
-                                <input id="confirm_password" type="password" name="confirm_password"
-                                       placeholder="Podaj stare hasło" required>
+                                <label for="{{ password_form.confirm_password.id_for_label }}">Podaj stare hasło, aby uwierzytelnić zmiany</label>
+                                <input id="{{ password_form.confirm_password.id_for_label }}" type="password" name="{{ password_form.confirm_password.html_name }}" placeholder="Podaj stare hasło" required>
+                                {% if password_form.confirm_password.errors %}
+                                    <div class="error-message">
+                                        {% for error in password_form.confirm_password.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
 
                             <div class="submit-button-container">
@@ -96,3 +144,4 @@
         </div>
     {% endblock %}
 </header>
+{% endblock %}

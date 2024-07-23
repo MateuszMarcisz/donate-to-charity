@@ -6,6 +6,9 @@ from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.contrib.auth import password_validation
 
+from config.validators import CustomMinimumLengthValidator, CustomCommonPasswordValidator, \
+    CustomNumericPasswordValidator, CustomPasswordValidator
+
 
 class CustomSetPasswordForm(SetPasswordForm):
     error_messages = {
@@ -73,12 +76,14 @@ class RegistrationForm(forms.ModelForm):
         self.fields['last_name'].error_messages = {'required': 'To pole jest wymagane.'}
 
         self.fields['username'].error_messages = {'required': 'To pole jest wymagane.'}
+
+        self.fields['email'].required = True
         self.fields['email'].error_messages = {'required': 'To pole jest wymagane.'}
 
     def clean_password(self):
         password = self.cleaned_data.get('password')
         try:
-            validate_password(password, user=None)  # Use Django's default password validators
+            validate_password(password, user=None)
         except ValidationError as e:
             raise ValidationError(e.messages, code='password_validation')
         return password
@@ -101,3 +106,80 @@ class RegistrationForm(forms.ModelForm):
         if User.objects.filter(username=username).exists():
             raise ValidationError("Użytkownik o takiej nazwie już istnieje!")
         return username
+
+
+class PasswordChangeForm(forms.Form):
+    change_password = forms.CharField(
+        widget=forms.PasswordInput,
+        label='Nowe hasło',
+        # min_length=8
+    )
+    change_password2 = forms.CharField(
+        widget=forms.PasswordInput,
+        label='Potwierdź nowe hasło'
+    )
+    confirm_password = forms.CharField(
+        widget=forms.PasswordInput,
+        label='Obecne hasło'
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+    def clean_change_password(self):
+        password = self.cleaned_data.get('change_password')
+        validate_password(password)
+        return password
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('change_password')
+        password2 = cleaned_data.get('change_password2')
+        confirm_password = cleaned_data.get('confirm_password')
+
+        if password and password2 and password != password2:
+            self.add_error('change_password2', 'Nowe hasła nie są zgodne.')
+
+        if self.user and confirm_password and not self.user.check_password(confirm_password):
+            self.add_error('confirm_password', 'Nieprawidłowe hasło użytkownika!')
+
+
+class UserUpdateForm(forms.ModelForm):
+    password = forms.CharField(
+        widget=forms.PasswordInput,
+        label="Podaj hasło, aby uwierzytelnić zmiany",
+        error_messages={'required': 'To pole jest wymagane.'}
+    )
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'first_name', 'last_name']
+        error_messages = {
+            'username': {'required': 'To pole jest wymagane.'},
+            'email': {'required': 'To pole jest wymagane.'},
+            'first_name': {'required': 'To pole jest wymagane.'},
+            'last_name': {'required': 'To pole jest wymagane.'}
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username=username).exclude(pk=self.instance.pk).exists():
+            raise ValidationError("Użytkownik o takiej nazwie już istnieje!")
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
+            raise ValidationError("Użytkownik o podanym adresie email już istnieje!")
+        return email
+
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        if not self.user.check_password(password):
+            raise ValidationError("Nieprawidłowe hasło użytkownika!")
+        return password

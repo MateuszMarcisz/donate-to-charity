@@ -18,7 +18,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views import View
 
-from charity_donations.forms import CustomSetPasswordForm, RegistrationForm
+from charity_donations.forms import CustomSetPasswordForm, RegistrationForm, PasswordChangeForm, UserUpdateForm
 # from charity_donations.forms import ChangePasswordForm
 from charity_donations.models import Donation, Institution, Category
 from config import settings
@@ -258,64 +258,60 @@ class ProfileView(LoginRequiredMixin, View):
 class SettingsView(LoginRequiredMixin, View):
     def get(self, request):
         user = request.user
+        password_form = PasswordChangeForm(user=user)
+        user_update_form = UserUpdateForm(instance=user, user=user)
         context = {
             'user': user,
+            'password_form': password_form,
+            'user_update_form': user_update_form,
         }
         return render(request, 'settings.html', context)
 
     def post(self, request):
         user = request.user
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        first_name = request.POST.get('first_name')
-        last_name = request.POST.get('last_name')
         form_type = request.POST.get('form_type')
-        change_password = request.POST.get('change_password')
-        change_password2 = request.POST.get('change_password2')
-        password_entered = request.POST.get('password')
-        confirm_password = request.POST.get('confirm_password')
 
         if form_type == 'update_info':
-            if not all([username, email, first_name, last_name, password_entered]):
-                messages.error(request, 'Wszystkie pola muszą być wypełnione.')
-            elif not user.check_password(password_entered):
-                messages.error(request, 'Nieprawidłowe hasło użytkownika!')
+            user_update_form = UserUpdateForm(request.POST, instance=user, user=user)
+            if user_update_form.is_valid():
+                user_update_form.save()
+                messages.success(request, 'Twoje dane zostały zmienione!')
+                return redirect('Settings')
             else:
-                try:
-                    user.username = username
-                    user.email = email
-                    user.first_name = first_name
-                    user.last_name = last_name
-                    user.save()
-                    messages.success(request, 'Twoje dane zostały zmienione!')
-                    return redirect('Settings')
-                except Exception:
-                    messages.error(request, 'Wystąpił błąd podczas aktualizacji danych.')
+                password_form = PasswordChangeForm(user=user)
+                context = {
+                    'user': user,
+                    'password_form': password_form,
+                    'user_update_form': user_update_form,
+                }
+                return render(request, 'settings.html', context)
 
         elif form_type == 'update_password':
-            if not all([change_password, change_password2, confirm_password]):
-                messages.error(request, 'Wszystkie pola muszą być wypełnione.')
-            elif not user.check_password(confirm_password):
-                messages.error(request, 'Nieprawidłowe hasło użytkownika!')
-            elif change_password != change_password2:
-                messages.error(request, 'Nowe hasła nie są zgodne')
+            password_form = PasswordChangeForm(data=request.POST, user=user)
+            if password_form.is_valid():
+                new_password = password_form.cleaned_data['change_password']
+                user.set_password(new_password)
+                user.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Twoje hasło zostało zmienione!')
+                return redirect('Settings')
             else:
-                try:
-                    user.set_password(change_password)
-                    user.save()
-                    update_session_auth_hash(request, user)  # Keep the user logged in with the new password
-                    messages.success(request, 'Twoje hasło zostało zmienione!')
-                    return redirect('Settings')
-                except Exception:
-                    messages.error(request, 'Wystąpił błąd podczas aktualizacji hasła.')
+                user_update_form = UserUpdateForm(instance=user, user=user)
+                context = {
+                    'user': user,
+                    'password_form': password_form,
+                    'user_update_form': user_update_form,
+                }
+                return render(request, 'settings.html', context)
 
         else:
             messages.error(request, 'Nieprawidłowy typ formularza.')
-
-        context = {
-            'user': user,
-        }
-        return render(request, 'settings.html', context)
+            context = {
+                'user': user,
+                'password_form': PasswordChangeForm(user=user),
+                'user_update_form': UserUpdateForm(instance=user, user=user)
+            }
+            return render(request, 'settings.html', context)
 
 
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):
