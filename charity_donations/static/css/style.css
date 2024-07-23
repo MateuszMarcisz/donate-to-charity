@@ -2077,3 +2077,16 @@ footer .bottom-line--icons a img {
     margin-bottom: 5px;
     margin-top: 20px;
 }
+
+
+.error-message {
+    color: red; /* Set the color you want for error messages */
+    font-size: 1.2rem; /* Adjust font size as needed */
+    margin-top: 0.5rem; /* Add spacing between input and error message */
+}
+
+.non-field-errors {
+    color: red; /* Set the color for non-field errors */
+    font-size: 1.2rem; /* Adjust font size as needed */
+    margin-top: 1rem; /* Add spacing for non-field errors */
+}
