@@ -5,6 +5,7 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.views import PasswordResetConfirmView
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
@@ -17,6 +18,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views import View
 
+from charity_donations.forms import CustomSetPasswordForm
 # from charity_donations.forms import ChangePasswordForm
 from charity_donations.models import Donation, Institution, Category
 from config import settings
@@ -323,3 +325,7 @@ class SettingsView(LoginRequiredMixin, View):
             'user': user,
         }
         return render(request, 'settings.html', context)
+
+
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
+    form_class = CustomSetPasswordForm
