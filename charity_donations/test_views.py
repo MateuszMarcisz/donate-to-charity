@@ -892,8 +892,81 @@ def test_settings_post_info_update_wrong_password(user):
     assert user.first_name != 'NewFirstName'
     assert user.last_name != 'NewLastName'
 
-    messages = list(get_messages(response.wsgi_request))
-    assert any("Nieprawidłowe hasło użytkownika!" in str(message) for message in messages)
+    form = response.context['user_update_form']
+    assert form.errors
+    assert 'Nieprawidłowe hasło użytkownika!' in form.errors.get('password', [])
+
+
+@pytest.mark.django_db
+def test_settings_post_info_update_existing_username(user):
+    # Create another user with the same username
+    User.objects.create_user(
+        username='existingusername',
+        email='existing@example.com',
+        password='password123'
+    )
+
+    client = Client()
+    client.force_login(user)
+    url = reverse('Settings')
+
+    post_data = {
+        'form_type': 'update_info',
+        'username': 'existingusername',  # Username that already exists
+        'email': 'newemail@example.com',
+        'first_name': 'NewFirstName',
+        'last_name': 'NewLastName',
+        'password': 'Random?1',
+    }
+
+    response = client.post(url, post_data, follow=True)
+    user.refresh_from_db()
+
+    assert response.status_code == 200
+    assert user.username != 'existingusername'
+    assert user.email != 'newemail@example.com'
+    assert user.first_name != 'NewFirstName'
+    assert user.last_name != 'NewLastName'
+
+    form = response.context['user_update_form']
+    assert form.errors
+    assert 'Użytkownik o takiej nazwie już istnieje!' in form.errors.get('username', [])
+
+
+@pytest.mark.django_db
+def test_settings_post_info_update_existing_email(user):
+    # Create another user with the same email
+    User.objects.create_user(
+        username='anotheruser',
+        email='existing@example.com',
+        password='password123'
+    )
+
+    client = Client()
+    client.force_login(user)
+    url = reverse('Settings')
+
+    post_data = {
+        'form_type': 'update_info',
+        'username': 'newusername',
+        'email': 'existing@example.com',  # Email that already exists
+        'first_name': 'NewFirstName',
+        'last_name': 'NewLastName',
+        'password': 'Random?1',
+    }
+
+    response = client.post(url, post_data, follow=True)
+    user.refresh_from_db()
+
+    assert response.status_code == 200
+    assert user.username != 'newusername'
+    assert user.email != 'existing@example.com'
+    assert user.first_name != 'NewFirstName'
+    assert user.last_name != 'NewLastName'
+
+    form = response.context['user_update_form']
+    assert form.errors
+    assert 'Użytkownik o podanym adresie email już istnieje!' in form.errors.get('email', [])
 
 
 @pytest.mark.django_db
@@ -927,20 +1000,90 @@ def test_settings_post_password_change_non_matching_new_passwords(user):
 
     post_data = {
         'form_type': 'update_password',
-        'change_password': 'newpassword',
-        'change_password2': 'differentnewpassword',
-        'confirm_password': 'test password',
+        'change_password': 'New0ne1?69',
+        'change_password2': 'New0ne1?6',
+        'confirm_password': 'Random?1',
     }
 
     response = client.post(url, post_data, follow=True)
     user.refresh_from_db()
-    print("Response content:", response.content.decode())
     assert response.status_code == 200
-    assert not user.check_password('newpassword')
-    assert not user.check_password('differentnewpassword')
+    assert not user.check_password('New0ne1?69')
+    assert not user.check_password('New0ne1?6')
 
-    messages = list(get_messages(response.wsgi_request))
-    assert any("Nowe hasła nie są zgodne" in str(message) for message in messages)
+    form = response.context['password_form']
+    assert form.errors
+    assert 'Nowe hasła nie są zgodne.' in form.errors.get('change_password2', [])
+
+
+@pytest.mark.django_db
+def test_settings_post_password_validation_errors(user):
+    client = Client()
+    client.force_login(user)
+    url = reverse('Settings')
+
+    # # Scenario 1: Password too short
+    # data = {
+    #     'form_type': 'update_password',
+    #     'change_password': 'short',
+    #     'change_password2': 'short',
+    #     'confirm_password': 'CurrentValidPassword1!'
+    # }
+    # response = client.post(url, data, follow=True)
+    # assert response.status_code == 200
+    # assert 'change_password' in response.context['password_form'].errors
+    # assert 'Hasło musi zawierać przynajmniej 8 znaków.' in response.context['password_form'].errors['change_password']
+
+    # Scenario 2: Password missing uppercase letter
+    data = {
+        'form_type': 'update_password',
+        'change_password': 'lowercase1!',
+        'change_password2': 'lowercase1!',
+        'confirm_password': 'CurrentValidPassword1!'
+    }
+    response = client.post(url, data, follow=True)
+    assert response.status_code == 200
+    assert 'change_password' in response.context['password_form'].errors
+    assert 'Hasło musi zawierać co najmniej jedną wielką literę.' in response.context['password_form'].errors[
+        'change_password']
+
+    # Scenario 3: Password missing lowercase letter
+    data = {
+        'form_type': 'update_password',
+        'change_password': 'UPPERCASE1!',
+        'change_password2': 'UPPERCASE1!',
+        'confirm_password': 'CurrentValidPassword1!'
+    }
+    response = client.post(url, data, follow=True)
+    assert response.status_code == 200
+    assert 'change_password' in response.context['password_form'].errors
+    assert 'Hasło musi zawierać co najmniej jedną małą literę.' in response.context['password_form'].errors[
+        'change_password']
+
+    # Scenario 4: Password missing number
+    data = {
+        'form_type': 'update_password',
+        'change_password': 'NoNumber!',
+        'change_password2': 'NoNumber!',
+        'confirm_password': 'CurrentValidPassword1!'
+    }
+    response = client.post(url, data, follow=True)
+    assert response.status_code == 200
+    assert 'change_password' in response.context['password_form'].errors
+    assert 'Hasło musi zawierać co najmniej jedną cyfrę.' in response.context['password_form'].errors['change_password']
+
+    # Scenario 5: Password missing special character
+    data = {
+        'form_type': 'update_password',
+        'change_password': 'NoSpecialChar1',
+        'change_password2': 'NoSpecialChar1',
+        'confirm_password': 'CurrentValidPassword1!'
+    }
+    response = client.post(url, data, follow=True)
+    assert response.status_code == 200
+    assert 'change_password' in response.context['password_form'].errors
+    assert 'Hasło musi zawierać co najmniej jeden znak specjalny.' in response.context['password_form'].errors[
+        'change_password']
 
 
 @pytest.mark.django_db
@@ -951,8 +1094,8 @@ def test_settings_post_password_change_incorrect_current_password(user):
 
     post_data = {
         'form_type': 'update_password',
-        'change_password': 'newpassword',
-        'change_password2': 'newpassword',
+        'change_password': 'Newpassword1!',
+        'change_password2': 'Newpassword1!',
         'confirm_password': 'wrongpassword',
     }
 
@@ -960,7 +1103,8 @@ def test_settings_post_password_change_incorrect_current_password(user):
     user.refresh_from_db()
 
     assert response.status_code == 200
-    assert not user.check_password('newpassword')
+    assert not user.check_password('Newpassword1!')
 
-    messages = list(get_messages(response.wsgi_request))
-    assert any("Nieprawidłowe hasło użytkownika!" in str(message) for message in messages)
+    form = response.context['password_form']
+    assert form.errors
+    assert 'Nieprawidłowe hasło użytkownika!' in form.errors.get('confirm_password', [])

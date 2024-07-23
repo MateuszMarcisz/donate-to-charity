@@ -314,7 +314,5 @@ class SettingsView(LoginRequiredMixin, View):
             return render(request, 'settings.html', context)
 
 
-
-
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     form_class = CustomSetPasswordForm
