@@ -3,11 +3,14 @@ from datetime import date, time
 
 import pytest
 from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib.messages import get_messages
 from django.core import mail
 from django.core.paginator import Paginator
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from pytest_django.asserts import assertContains, assertTemplateUsed
 
 from charity_donations.models import Donation, Institution
@@ -57,7 +60,7 @@ def test_login_view_inactive_user(user):
 
     client = Client()
     url = reverse('Login')
-    response = client.post(url, {'username': user.username, 'password': 'test password'})
+    response = client.post(url, {'username': user.username, 'password': 'Random?1'})
 
     assert response.status_code == 200
     assertContains(response,
@@ -74,7 +77,7 @@ def test_login_redirect_for_inactive_user(user):
 
     client = Client()
     url = reverse('Login')
-    response = client.post(url, {'username': user.username, 'password': 'test password'}, follow=True)
+    response = client.post(url, {'username': user.username, 'password': 'Random?1'}, follow=True)
 
     assert response.status_code == 200
     assert 'Twoje konto nie zostało aktywowane. Proszę, sprawdź swojego maila i aktywuj konto poprzez kliknięcie w link aktywacyjny.' in response.content.decode(
@@ -88,7 +91,7 @@ def test_login_view_changing_user_status_active(user):
 
     client = Client()
     url = reverse('Login')
-    response = client.post(url, {'username': user.username, 'password': 'test password'})
+    response = client.post(url, {'username': user.username, 'password': 'Random?1'})
 
     assert response.status_code == 200
     assertContains(response,
@@ -130,20 +133,20 @@ def test_register_view_post():
     client = Client()
     url = reverse('Register')
     data = {
-        'name': 'test',
-        'surname': 'test',
-        'username': 'test user',
+        'first_name': 'test',
+        'last_name': 'test',
+        'username': 'test',
         'email': 'test@gmail.com',
-        'password': 'test password',
-        'password2': 'test password',
+        'password': 'Random?1',
+        'password2': 'Random?1',
     }
     response = client.post(url, data)
     assert response.status_code == 302
     assert response.url == reverse('Login')
-    assert User.objects.get(username='test user')
+    assert User.objects.get(username='test')
 
     # checking for the message
-    assert User.objects.filter(username='test user').exists()
+    assert User.objects.filter(username='test').exists()
     messages = list(get_messages(response.wsgi_request))
     assert len(messages) == 1
     assert str(messages[0]) == 'Prosimy o potwierdzenie konta poprzez link wysłany na podane w rejestracji adres email.'
@@ -159,6 +162,10 @@ def test_register_view_post():
     assert 'Please click the link below to activate your account:' in email_body
     assert 'http://testserver/activate/' in email_body  # Checking that activation link is in the email
     assert 'Thank you!' in email_body
+    # Extract the activation link from the email body
+    uid = urlsafe_base64_encode(force_bytes(User.objects.get(username='test').pk))
+    token = default_token_generator.make_token(User.objects.get(username='test'))
+    activation_link = f'http://testserver/activate/{uid}/{token}/'
 
 
 @pytest.mark.django_db
@@ -166,20 +173,21 @@ def test_register_view_post_username_already_exists(user):
     client = Client()
     url = reverse('Register')
     data = {
-        'name': 'test',
-        'surname': 'test',
-        'username': 'test user',
-        'email': 'testowy@gmail.com',
-        'password': 'test password',
-        'password2': 'test password',
+        'first_name': 'test',
+        'last_name': 'test',
+        'username': 'test',
+        'email': 'test@gmail.com',
+        'password': 'Random?1',
+        'password2': 'Random?1',
     }
     response = client.post(url, data)
     assert response.status_code == 200
     assertTemplateUsed(response, 'register.html')
     assertContains(response, reverse('Register'))
     assertContains(response, "Użytkownik o takiej nazwie już istnieje!")
-    assert 'error' in response.context
-    assert response.context['error'] == "Użytkownik o takiej nazwie już istnieje!"
+    form = response.context['form']
+    assert 'username' in form.errors
+    assert form.errors['username'] == ['Użytkownik o takiej nazwie już istnieje!']
 
 
 @pytest.mark.django_db
@@ -187,20 +195,21 @@ def test_register_view_post_email_already_exists(user):
     client = Client()
     url = reverse('Register')
     data = {
-        'name': 'test',
-        'surname': 'test',
-        'username': 'user',
+        'first_name': 'testy',
+        'last_name': 'testy',
+        'username': 'testy',
         'email': 'test@gmail.com',
-        'password': 'test password',
-        'password2': 'test password',
+        'password': 'Random?1',
+        'password2': 'Random?1',
     }
     response = client.post(url, data)
     assert response.status_code == 200
     assertTemplateUsed(response, 'register.html')
     assertContains(response, reverse('Register'))
     assertContains(response, "Użytkownik o podanym adresie email już istnieje!")
-    assert 'error' in response.context
-    assert response.context['error'] == "Użytkownik o podanym adresie email już istnieje!"
+    form = response.context['form']
+    assert 'email' in form.errors
+    assert form.errors['email'] == ["Użytkownik o podanym adresie email już istnieje!"]
 
 
 @pytest.mark.django_db
@@ -208,19 +217,22 @@ def test_register_view_post_missing_username(user):
     client = Client()
     url = reverse('Register')
     data = {
-        'name': 'test',
-        'surname': 'test',
+        'first_name': 'test',
+        'last_name': 'test',
         'email': 'test@gmail.com',
-        'password': 'test password',
-        'password2': 'test password',
+        'password': 'Random?1',
+        'password2': 'Random?1',
     }
     response = client.post(url, data)
     assert response.status_code == 200
+    print("Response content:", response.content.decode())
     assertTemplateUsed(response, 'register.html')
     assertContains(response, reverse('Register'))
-    assertContains(response, "Wszystkie pola są wymagane!")
-    assert 'error' in response.context
-    assert response.context['error'] == "Wszystkie pola są wymagane!"
+    assertContains(response, 'Załóż konto')
+    assertContains(response, "To pole jest wymagane.")
+    form = response.context['form']
+    assert 'username' in form.errors
+    assert form.errors['username'] == ['To pole jest wymagane.']
 
 
 @pytest.mark.django_db
@@ -228,19 +240,21 @@ def test_register_view_post_missing_name(user):
     client = Client()
     url = reverse('Register')
     data = {
-        'surname': 'test',
-        'username': 'user',
+        'last_name': 'testy',
+        'username': 'testy',
         'email': 'test@gmail.com',
-        'password': 'test password',
-        'password2': 'test password',
+        'password': 'Random?1',
+        'password2': 'Random?1',
     }
     response = client.post(url, data)
     assert response.status_code == 200
     assertTemplateUsed(response, 'register.html')
     assertContains(response, reverse('Register'))
-    assertContains(response, "Wszystkie pola są wymagane!")
-    assert 'error' in response.context
-    assert response.context['error'] == "Wszystkie pola są wymagane!"
+    assertContains(response, 'Załóż konto')
+    assertContains(response, "To pole jest wymagane.")
+    form = response.context['form']
+    assert 'first_name' in form.errors
+    assert form.errors['first_name'] == ['To pole jest wymagane.']
 
 
 @pytest.mark.django_db
@@ -248,19 +262,21 @@ def test_register_view_post_missing_email(user):
     client = Client()
     url = reverse('Register')
     data = {
-        'name': 'test',
-        'surname': 'test',
-        'username': 'user',
-        'password': 'test password',
-        'password2': 'test password',
+        'first_name': 'testy',
+        'last_name': 'testy',
+        'username': 'testy',
+        'password': 'Random?1',
+        'password2': 'Random?1',
     }
     response = client.post(url, data)
     assert response.status_code == 200
     assertTemplateUsed(response, 'register.html')
     assertContains(response, reverse('Register'))
-    assertContains(response, "Wszystkie pola są wymagane!")
-    assert 'error' in response.context
-    assert response.context['error'] == "Wszystkie pola są wymagane!"
+    assertContains(response, 'Załóż konto')
+    assertContains(response, "To pole jest wymagane.")
+    form = response.context['form']
+    assert 'email' in form.errors
+    assert form.errors['email'] == ['To pole jest wymagane.']
 
 
 @pytest.mark.django_db
@@ -270,16 +286,21 @@ def test_register_view_post_missing_multiple_fields(user):
     data = {
         'name': 'test',
         'surname': 'test',
-        'password': 'test password',
-        'password2': 'test password',
+        'password': 'Random?1',
+        'password2': 'Random?1',
     }
     response = client.post(url, data)
     assert response.status_code == 200
     assertTemplateUsed(response, 'register.html')
     assertContains(response, reverse('Register'))
-    assertContains(response, "Wszystkie pola są wymagane!")
-    assert 'error' in response.context
-    assert response.context['error'] == "Wszystkie pola są wymagane!"
+    assertContains(response, 'Załóż konto')
+    assertContains(response, "To pole jest wymagane.")
+    form = response.context['form']
+    expected_error_message = "To pole jest wymagane."
+    required_fields = ['first_name', 'last_name', 'username', 'email']
+    for field in required_fields:
+        assert field in form.errors
+        assert expected_error_message in form.errors[field]
 
 
 @pytest.mark.django_db
@@ -287,20 +308,130 @@ def test_register_view_post_not_matching_passwords(user):
     client = Client()
     url = reverse('Register')
     data = {
-        'name': 'test',
-        'surname': 'test',
-        'username': 'user',
+        'first_name': 'testy',
+        'last_name': 'testy',
+        'username': 'testy',
         'email': 'test@gmail.com',
-        'password': 'test password',
-        'password2': 'test password2',
+        'password': 'Random?1',
+        'password2': 'Random?',
     }
     response = client.post(url, data)
     assert response.status_code == 200
     assertTemplateUsed(response, 'register.html')
     assertContains(response, reverse('Register'))
+    assertContains(response, 'Załóż konto')
     assertContains(response, "Hasła nie są zgodne!")
-    assert 'error' in response.context
-    assert response.context['error'] == "Hasła nie są zgodne!"
+    form = response.context['form']
+    assert 'password2' in form.errors
+    assert "Hasła nie są zgodne!" in form.errors['password2']
+
+
+@pytest.mark.django_db
+def test_register_view_post_password_validation_errors(user):
+    client = Client()
+    url = reverse('Register')
+
+    # Scenario 1: Password too short
+    data = {
+        'first_name': 'testy',
+        'last_name': 'testy',
+        'username': 'testy',
+        'email': 'test@gmail.com',
+        'password': 'short',
+        'password2': 'short',
+    }
+    response = client.post(url, data)
+    assert response.status_code == 200
+    assertTemplateUsed(response, 'register.html')
+    assertContains(response, 'Załóż konto')
+    form = response.context['form']
+    assert 'password' in form.errors
+    assert 'Twoje hasło musi zawierać przynajmniej 8 znaków.' in form.errors['password']
+
+    # Scenario 2: Password missing uppercase letter
+    data = {
+        'first_name': 'testy',
+        'last_name': 'testy',
+        'username': 'testy',
+        'email': 'test@gmail.com',
+        'password': 'password1!',
+        'password2': 'password1!',
+    }
+    response = client.post(url, data)
+    assert response.status_code == 200
+    assertTemplateUsed(response, 'register.html')
+    assertContains(response, 'Załóż konto')
+    form = response.context['form']
+    assert 'password' in form.errors
+    assert 'Hasło musi zawierać co najmniej jedną wielką literę.' in form.errors['password']
+
+    # Scenario 3: Password missing lowercase letter
+    data = {
+        'first_name': 'testy',
+        'last_name': 'testy',
+        'username': 'testy',
+        'email': 'test@gmail.com',
+        'password': 'PASSWORD1!',
+        'password2': 'PASSWORD1!',
+    }
+    response = client.post(url, data)
+    assert response.status_code == 200
+    assertTemplateUsed(response, 'register.html')
+    assertContains(response, 'Załóż konto')
+    form = response.context['form']
+    assert 'password' in form.errors
+    assert 'Hasło musi zawierać co najmniej jedną małą literę.' in form.errors['password']
+
+    # Scenario 4: Password missing number
+    data = {
+        'first_name': 'testy',
+        'last_name': 'testy',
+        'username': 'testy',
+        'email': 'test@gmail.com',
+        'password': 'Password!',
+        'password2': 'Password!',
+    }
+    response = client.post(url, data)
+    assert response.status_code == 200
+    assertTemplateUsed(response, 'register.html')
+    assertContains(response, 'Załóż konto')
+    form = response.context['form']
+    assert 'password' in form.errors
+    assert 'Hasło musi zawierać co najmniej jedną cyfrę.' in form.errors['password']
+
+    # Scenario 5: Password missing special character
+    data = {
+        'first_name': 'testy',
+        'last_name': 'testy',
+        'username': 'testy',
+        'email': 'test@gmail.com',
+        'password': 'Password1',
+        'password2': 'Password1',
+    }
+    response = client.post(url, data)
+    assert response.status_code == 200
+    assertTemplateUsed(response, 'register.html')
+    assertContains(response, 'Załóż konto')
+    form = response.context['form']
+    assert 'password' in form.errors
+    assert 'Hasło musi zawierać co najmniej jeden znak specjalny.' in form.errors['password']
+
+    # Scenario 6: Passwords match but still fail validation
+    data = {
+        'first_name': 'testy',
+        'last_name': 'testy',
+        'username': 'testy',
+        'email': 'test@gmail.com',
+        'password': 'P@ssw1',
+        'password2': 'P@ssw1',
+    }
+    response = client.post(url, data)
+    assert response.status_code == 200
+    assertTemplateUsed(response, 'register.html')
+    assertContains(response, 'Załóż konto')
+    form = response.context['form']
+    assert 'password' in form.errors
+    assert 'Twoje hasło musi zawierać przynajmniej 8 znaków.' in form.errors['password']
 
 
 @pytest.mark.django_db
@@ -349,7 +480,7 @@ def test_landing_page_view_get_pagination(donations, request_factory):
 @pytest.mark.django_db
 def test_add_donation_view_get(user):
     client = Client()
-    client.login(username='test user', password='test password')
+    client.login(username='test', password='Random?1')
     url = reverse('AddDonation')
     response = client.get(url)
     assert response.status_code == 200
@@ -721,7 +852,7 @@ def test_settings_post_info_update(user):
         'email': 'newemail@example.com',
         'first_name': 'NewFirstName',
         'last_name': 'NewLastName',
-        'password': 'test password',
+        'password': 'Random?1',
     }
 
     response = client.post(url, post_data, follow=True)
@@ -773,16 +904,16 @@ def test_settings_post_password_change(user):
 
     post_data = {
         'form_type': 'update_password',
-        'change_password': 'newpassword',
-        'change_password2': 'newpassword',
-        'confirm_password': 'test password',
+        'change_password': 'Newpassword?1',
+        'change_password2': 'Newpassword?1',
+        'confirm_password': 'Random?1',
     }
 
     response = client.post(url, post_data, follow=True)
     user.refresh_from_db()
 
     assert response.status_code == 200
-    assert user.check_password('newpassword')
+    assert user.check_password('Newpassword?1')
 
     messages = list(get_messages(response.wsgi_request))
     assert any("Twoje hasło zostało zmienione!" in str(message) for message in messages)
@@ -803,7 +934,7 @@ def test_settings_post_password_change_non_matching_new_passwords(user):
 
     response = client.post(url, post_data, follow=True)
     user.refresh_from_db()
-
+    print("Response content:", response.content.decode())
     assert response.status_code == 200
     assert not user.check_password('newpassword')
     assert not user.check_password('differentnewpassword')
