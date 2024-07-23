@@ -10,8 +10,8 @@ from charity_donations.models import Category, Institution, Donation
 @pytest.fixture
 def user():
     return User.objects.create_user(
-        username='test user',
-        password='test password',
+        username='test',
+        password='Random?1',
         email='test@gmail.com',
         first_name='test',
         last_name='test'

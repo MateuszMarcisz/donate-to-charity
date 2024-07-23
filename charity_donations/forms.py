@@ -73,6 +73,8 @@ class RegistrationForm(forms.ModelForm):
         self.fields['last_name'].error_messages = {'required': 'To pole jest wymagane.'}
 
         self.fields['username'].error_messages = {'required': 'To pole jest wymagane.'}
+
+        self.fields['email'].required = True
         self.fields['email'].error_messages = {'required': 'To pole jest wymagane.'}
 
     def clean_password(self):
