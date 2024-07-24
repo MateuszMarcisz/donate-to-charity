@@ -1407,3 +1407,28 @@ def test_user_update_form(user):
     })
     assert not form.is_valid()
     assert form.errors['email'] == ['Użytkownik o podanym adresie email już istnieje!']
+
+
+# Testing superuser deleting restrains (deletion of last superuser)
+
+@pytest.mark.django_db
+def test_delete_last_superuser(superusers):
+    client = Client()
+    # Test that we can delete a superuser if more than one exists
+    if len(superusers) > 1:
+        client.force_login(superusers[0])
+
+        user_to_delete = superusers[1]
+        url = reverse('admin:auth_user_delete', args=[user_to_delete.id])
+        response = client.post(url, {'post': 'yes'}, follow=True)
+        assert response.status_code == 200
+        assert not User.objects.filter(id=user_to_delete.id).exists()
+
+    # Now test the case where only one superuser exists
+    if len(superusers) == 1:
+        client.login(username=superusers[0].username, password='Random?1')
+        url = reverse('admin:auth_user_delete', args=[superusers[0].id])
+        response = client.post(url, {'post': 'yes'}, follow=True)
+
+        assert response.status_code == 403
+        assert User.objects.filter(id=superusers[0].id).exists()
