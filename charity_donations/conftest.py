@@ -19,6 +19,24 @@ def user():
 
 
 @pytest.fixture
+def superusers():
+    superusers = []
+    for i in range(3):
+        superuser = User.objects.create_user(
+            username=f'test{i}',
+            password='Random?1',
+            email=f'test{i}@gmail.com',
+            first_name='test',
+            last_name='test',
+            is_superuser=True,
+            is_staff=True,
+            is_active=True,
+        )
+        superusers.append(superuser)
+    return superusers
+
+
+@pytest.fixture
 def categories():
     categories = []
     for i in range(10):
