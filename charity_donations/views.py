@@ -11,14 +11,16 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db import models
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.shortcuts import render, redirect
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views import View
 
-from charity_donations.forms import CustomSetPasswordForm, RegistrationForm, PasswordChangeForm, UserUpdateForm
+from charity_donations.forms import CustomSetPasswordForm, RegistrationForm, PasswordChangeForm, UserUpdateForm, \
+    ContactForm
 # from charity_donations.forms import ChangePasswordForm
 from charity_donations.models import Donation, Institution, Category
 from config import settings
@@ -316,3 +318,25 @@ class SettingsView(LoginRequiredMixin, View):
 
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     form_class = CustomSetPasswordForm
+
+
+class ContactView(View):
+    def post(self, request):
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            surname = form.cleaned_data['surname']
+            message = form.cleaned_data['message']
+            subject = f"Contact Form Submission from {name} {surname}"
+            email_body = f"Name: {name}\nSurname: {surname}\n\nMessage:\n{message}"
+            superusers = User.objects.filter(is_superuser=True)
+            recipient_list = [user.email for user in superusers if user.email]
+            send_mail(subject, email_body, 'noreply@charity.com', recipient_list)
+            return redirect('SuccessMessage')
+        else:
+            return HttpResponse("Something went terribly wrong and we could not submit the message")
+
+
+class SuccessMessageView(View):
+    def get(self, request):
+        return render(request, 'success_message.html')
