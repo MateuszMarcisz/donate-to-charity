@@ -18,6 +18,8 @@ from pytest_django.asserts import assertContains, assertTemplateUsed
 from charity_donations.admin import InstitutionAdmin
 from charity_donations.forms import CustomSetPasswordForm, RegistrationForm, PasswordChangeForm, UserUpdateForm
 from charity_donations.models import Donation, Institution
+from django.contrib.auth import get_user_model
+from django.contrib import messages
 
 
 @pytest.mark.django_db
@@ -1169,6 +1171,94 @@ def test_custom_password_reset_confirm_view(user):
     assert 'new_password2' in response.content.decode()
 
 
+# Testing superuser deleting restrains (deletion of last superuser)
+
+@pytest.mark.django_db
+def test_delete_last_superuser(superusers):
+    client = Client()
+    # Test that we can delete a superuser if more than one exists
+    if len(superusers) > 1:
+        client.force_login(superusers[0])
+
+        user_to_delete = superusers[1]
+        url = reverse('admin:auth_user_delete', args=[user_to_delete.id])
+        response = client.post(url, {'post': 'yes'}, follow=True)
+        assert response.status_code == 200
+        assert not User.objects.filter(id=user_to_delete.id).exists()
+
+    # Now test the case where only one superuser exists
+    if len(superusers) == 1:
+        client.login(username=superusers[0].username, password='Random?1')
+        url = reverse('admin:auth_user_delete', args=[superusers[0].id])
+        response = client.post(url, {'post': 'yes'}, follow=True)
+
+        assert response.status_code == 403
+        assert User.objects.filter(id=superusers[0].id).exists()
+
+
+@pytest.mark.django_db
+def test_success_message_view():
+    client = Client()
+    url = reverse('SuccessMessage')
+    response = client.get(url)
+    assert response.status_code == 200
+    assertTemplateUsed(response, 'success_message.html')
+
+
+@pytest.mark.django_db
+def test_contact_view_post():
+    client = Client()
+    url = reverse('Contact')
+    valid_data = {
+        'name': 'me',
+        'surname': 'also me',
+        'message': 'this is my message'
+    }
+    response = client.post(url, valid_data)
+    assert response.status_code == 302
+    success_url = reverse('SuccessMessage')
+    assert response.url == success_url
+
+
+@pytest.mark.django_db
+def test_invalid_form_submission():
+    client = Client()
+    url = reverse('Contact')
+    invalid_data = {
+        'name': '',
+        'surname': '',
+        'message': 'This is a test message.'
+    }
+    response = client.post(url, invalid_data)
+    assert response.status_code == 200
+    assert "Something went terribly wrong and we could not submit the message" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_activate_account_view_success(activation_data, user):
+    user.is_active = False
+    client = Client()
+    uid, token = activation_data
+    url = reverse('ActivateAccount', kwargs={'uidb64': uid, 'token': token})
+    response = client.get(url)
+    user = get_user_model().objects.get(pk=urlsafe_base64_decode(uid).decode())
+    assert response.status_code == 302
+    assert user.is_active is True
+
+
+@pytest.mark.django_db
+def test_activate_account_view_invalid_uid(user):
+    client = Client()
+    user.is_active = False
+    assert user.is_active is False
+    invalid_uid = 'invaliduid'
+    token = default_token_generator.make_token(User.objects.first())
+    url = reverse('ActivateAccount', kwargs={'uidb64': invalid_uid, 'token': token})
+    response = client.get(url)
+    assert response.status_code == 302
+    assert user.is_active is False
+
+
 # testing forms.py
 
 @pytest.mark.django_db
@@ -1407,28 +1497,3 @@ def test_user_update_form(user):
     })
     assert not form.is_valid()
     assert form.errors['email'] == ['Użytkownik o podanym adresie email już istnieje!']
-
-
-# Testing superuser deleting restrains (deletion of last superuser)
-
-@pytest.mark.django_db
-def test_delete_last_superuser(superusers):
-    client = Client()
-    # Test that we can delete a superuser if more than one exists
-    if len(superusers) > 1:
-        client.force_login(superusers[0])
-
-        user_to_delete = superusers[1]
-        url = reverse('admin:auth_user_delete', args=[user_to_delete.id])
-        response = client.post(url, {'post': 'yes'}, follow=True)
-        assert response.status_code == 200
-        assert not User.objects.filter(id=user_to_delete.id).exists()
-
-    # Now test the case where only one superuser exists
-    if len(superusers) == 1:
-        client.login(username=superusers[0].username, password='Random?1')
-        url = reverse('admin:auth_user_delete', args=[superusers[0].id])
-        response = client.post(url, {'post': 'yes'}, follow=True)
-
-        assert response.status_code == 403
-        assert User.objects.filter(id=superusers[0].id).exists()
