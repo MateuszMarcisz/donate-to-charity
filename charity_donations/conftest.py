@@ -2,7 +2,11 @@ from datetime import date, time
 
 import pytest
 from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
 from django.test import RequestFactory
+from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 from charity_donations.models import Category, Institution, Donation
 
@@ -16,6 +20,24 @@ def user():
         first_name='test',
         last_name='test'
     )
+
+
+@pytest.fixture
+def superusers():
+    superusers = []
+    for i in range(3):
+        superuser = User.objects.create_user(
+            username=f'test{i}',
+            password='Random?1',
+            email=f'test{i}@gmail.com',
+            first_name='test',
+            last_name='test',
+            is_superuser=True,
+            is_staff=True,
+            is_active=True,
+        )
+        superusers.append(superuser)
+    return superusers
 
 
 @pytest.fixture
@@ -66,3 +88,16 @@ def donations(institutions, categories, user):
 @pytest.fixture
 def request_factory():
     return RequestFactory()
+
+
+@pytest.fixture
+def activation_data(user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    return uid, token
+
+
+@pytest.fixture
+def activate_url(activation_data):
+    uid, token = activation_data
+    return reverse('ActivateAccount', kwargs={'uidb64': uid, 'token': token})

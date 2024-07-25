@@ -183,3 +183,9 @@ class UserUpdateForm(forms.ModelForm):
         if not self.user.check_password(password):
             raise ValidationError("Nieprawidłowe hasło użytkownika!")
         return password
+
+
+class ContactForm(forms.Form):
+    name = forms.CharField(max_length=100, required=True)
+    surname = forms.CharField(max_length=100, required=True)
+    message = forms.CharField(widget=forms.Textarea, required=True)

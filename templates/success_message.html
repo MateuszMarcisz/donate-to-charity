@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+<header class="header--main-page">
+    {% block navbar %}
+        {{ block.super }}
+    {% endblock %}
+    {% block header_help %}
+    {% endblock %}
+</header>
+
+{% block content %}
+    <h2>Thank you for your message!</h2>
+    <p class="center-text" style="font-size: 1.5rem;">We have received your message and will get back to you soon.</p>
+{% endblock %}
